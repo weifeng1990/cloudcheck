@@ -1,0 +1,59 @@
+/* 页面整体 */
+body {
+    margin: auto;
+    max-width: 780px;
+    font-size: 14px;
+    font-family: Helvetica, Arial, sans-serif;
+}
+/* 页脚 */
+footer {
+    color: #888;
+    margin-top: 15px;
+    text-align: center;
+}
+nav ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #838aff;
+}
+nav li {
+    float: left;
+}
+nav li a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 8px 12px;
+    text-decoration: none;
+}
+nav li a:hover {
+    background-color: #838aff;
+}
+
+/* 主页表格 */
+.tabtop {
+	margin-top: 13px;
+}
+.tabtop td{
+	background-color:#ffffff;
+	height:25px;
+	line-height:150%;
+}
+.font-center{ text-align:center}
+.btbg{background:#e9faff !important;}
+
+.inline-form{
+    display: inline;
+}
+.btn {
+    font-size: 12px;
+    padding: 3px 5px;
+    text-decoration: none;
+    cursor: pointer;
+    background-color: white;
+    color: black;
+    border: 1px solid #555555;
+    border-radius: 5px;
+}

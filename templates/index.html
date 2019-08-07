@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <p>主机信息  总计{{ hosts|length }}</p>
+    <table width="100%" border="0" cellspacing="1" cellpadding="4" bgcolor="#cccccc" class="tabtop" align="center">
+    <tr>
+        <td>
+            <form>
+                <input type="checkbox" id="role_check" onclick="setAllNo()">
+            </form>
+        </td>
+        <td class="btbg font-center">主机id</td>
+        <td class="btbg font-center">主机角色</td>
+        <td class="btbg font-center">主机ip</td>
+        <td class="btbg font-center">ssh账号</td>
+        <!--td class="btbg font-center">ssh密码</td-->
+        <td class="btbg font-center">ssh端口</td>
+        <td class="btbg font-center">http账号</td>
+        <!--td class="btbg font-center">http密码</td-->
+        <td class="btbg font-center">http端口</td>
+        <td class="btbg font-center">操作</td>
+    </tr>
+    {% for host in hosts %}
+    <tr>
+        <td>
+            <form>
+                <input type="checkbox" name="if_check" value="{{ host.id }}">
+            </form>
+        </td>
+        <td class="font-center">{{ host.id }}</td>
+        <td class="font-center">{{ host.role }}</td>
+        <td class="font-center">{{ host.ip }}</td>
+        <td class="font-center">{{ host.ssh_user }}</td>
+        <!--td class="font-center">{{ host.ssh_passwd }}</td-->
+        <td class="font-center">{{ host.ssh_port }}</td>
+        <td class="font-center">{{ host.http_user }}</td>
+        <!--td class="font-center">{{ host.http_passwd }}</td-->
+        <td class="font-center">{{ host.http_port }}</td>
+        <td class="font-center">
+            <form class="inline-form" method="get" action="{{ url_for('edit', host_id=host.id) }}">
+                <input class="btn" type="submit" name="delete" value="修改">
+            </form>
+            <form class="inline-form" method="post" action="{{ url_for('delete', host_id=host.id) }}">
+                <input class="btn" type="submit" name="delete" value="删除" onclick="return confirm('是否确定删除？')">
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+    </table>
+    <!--form  method="post" action="#" style="width:100%; text-align: right">
+    <input type="submit" value="开始巡检" onclick="get_check_id()" style="width: 102px;">
+    </form-->
+    <button id="btn" style="width:102px" onclick="get_check_id()">开始巡检</button>
+    <h2></h2>
+    <h3 id="started"></h3>
+    <div id="checklog"></div>
+    <script type="text/javascript">
+    function setAllNo() {
+        var role_checks = document.getElementById("role_check");
+        var if_checks = document.getElementsByName("if_check");
+        if(role_checks.checked == false){
+            for (var i=0; i<if_checks.length; i++){
+                if_checks[i].checked = false;
+            }
+        }
+        else {
+            for (var i=0; i<if_checks.length; i++){
+                if_checks[i].checked = true;
+            }
+        }
+    }
+
+    function get_check_id() {
+        checklog.innerHTML = '';
+        started.innerHTML = '-----巡检日志-----';
+        var if_checks = document.getElementsByName("if_check");
+        var test = document.getElementById("test")
+        var check_ids = new Array()
+        var test_data = ['test', 'ttt']
+        for (var i=0; i<if_checks.length; i++){
+            if (if_checks[i].checked == true){
+                var id = if_checks[i].value
+                check_ids.push(id)
+            }
+        }
+        $.ajax({
+            type:'post',
+            url:"{{ url_for('check') }}",
+            data:JSON.stringify(check_ids),
+            contentType: 'application/json; charset=UTF-8',
+            dataType: 'json',
+            success:function (result) {
+                $.each(result, function (i, item) {
+                    var str = '联通性检查：' + item.role + '   ' + item.ip + '   ' + item.status;
+                    var node = document.createElement("H4");
+                    var textnode = document.createTextNode(str)
+                    node.appendChild(textnode);
+                    document.getElementById("checklog").appendChild(node);
+                })
+            }
+        })
+    }
+    </script>
+{% endblock %}

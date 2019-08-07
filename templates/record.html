@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <p>主机信息  总计{{ records|length }}</p>
+    <table width="100%" border="0" cellspacing="1" cellpadding="4" bgcolor="#cccccc" class="tabtop" align="center">
+    <tr>
+        <td class="btbg font-center">巡检id</td>
+        <td class="btbg font-center">巡检时间</td>
+        <td class="btbg font-center">巡检内容</td>
+        <td class="btbg font-center">巡检结果</td>
+        <td class="btbg font-center">文档</td>
+        <td class="btbg font-center">操作</td>
+    </tr>
+    {% for record in records %}
+    <tr>
+        <td class="font-center">{{ record.id }}</td>
+        <td class="font-center">{{ record.check_time }}</td>
+        <td class="font-center">{{ record.check_content }}</td>
+        <td class="font-center">{{ record.check_result }}</td>
+        <td class="font-center">{{ record.check_doc }}</td>
+        <td class="font-center">
+            <form class="inline-form" method="get" action="{{ url_for('download_file', record_id=record.id) }}">
+                <input class="btn" type="submit" name="delete" value="下载">
+            </form>
+            <form class="inline-form" method="post" action="{{ url_for('delete_record', record_id=record.id) }}">
+                <input class="btn" type="submit" name="delete" value="删除" onclick="return confirm('是否确定删除？')">
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+    </table>
+{% endblock %}
