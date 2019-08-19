@@ -24,6 +24,7 @@ class casCollect:
     def cvmBasicCollect(self):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+        print("ssh连接##########", self.host, self.sshUser, self.sshPassword)
         ssh.connect(self.host, 22, self.sshUser, self.sshPassword)
         #服务器硬件型号
         stdin, stdout, stderr = ssh.exec_command("dmidecode | grep -i product | awk 'NR==1{print $3,$4,$5 }'")
@@ -148,17 +149,18 @@ class casCollect:
                 list1 = list()
                 dict2 = dict()
                 k['sharePool'] = list()
-                if 'storagePool' in dict1['list']:
-                    if isinstance(dict1['list']['storagePool'], dict):
-                        list1.append(dict1['list']['storagePool'])
-                    else:
-                        list1 = dict1['list']['storagePool']
-                    for j in list1:
-                        dict2['name'] = j['name']
-                        dict2['rate'] = 1 - (float)(j['freeSize']) / (float)(j['totalSize'])
-                        dict2['path'] = j['path']
-                        k['sharePool'].append(dict2.copy())
-                        # print(k['name'], j['name'],dict2['rate'])
+                if isinstance(dict1['list'], dict):
+                    if 'storagePool' in dict1['list']:
+                        if isinstance(dict1['list']['storagePool'], dict):
+                            list1.append(dict1['list']['storagePool'])
+                        else:
+                            list1 = dict1['list']['storagePool']
+                        for j in list1:
+                            dict2['name'] = j['name']
+                            dict2['rate'] = 1 - (float)(j['freeSize']) / (float)(j['totalSize'])
+                            dict2['path'] = j['path']
+                            k['sharePool'].append(dict2.copy())
+                            # print(k['name'], j['name'],dict2['rate'])
                 del list1
                 del dict2
         return
@@ -329,15 +331,16 @@ class casCollect:
                         contxt1 = xmltodict.parse(response.text)
                         response.close()
                         list1 = list()
-                        if isinstance(contxt1['domain']['partition'], dict):
-                            list1.append(contxt1['domain']['partition'])
-                        else:
-                            list1 = (contxt1['domain']['partition']).copy()
-                        dict1 = dict()
-                        for m in list1:
-                            dict1['name'] = m['device']
-                            dict1['usage'] = (float)(m['usage'])
-                            k['diskRate'].append(dict1.copy())
+                        if isinstance(contxt1['domain'], dict) and 'partition' in contxt1['domain'].keys():
+                            if isinstance(contxt1['domain']['partition'], dict):
+                                list1.append(contxt1['domain']['partition'])
+                            else:
+                                list1 = (contxt1['domain']['partition']).copy()
+                            dict1 = dict()
+                            for m in list1:
+                                dict1['name'] = m['device']
+                                dict1['usage'] = (float)(m['usage'])
+                                k['diskRate'].append(dict1.copy())
                         del list1
         return
 
@@ -416,11 +419,8 @@ class casCollect:
                                 temp2['name'] = h['vsName']
                                 temp2['mode'] = h['deviceModel']
                                 temp2['KernelAccelerated'] = h['isKernelAccelerated']
-                            else:
-                                temp2['name'] = 'NULL'
-                                temp2['mode'] = 'NULL'
-                            k['vmNetwork'].append(temp2.copy())
-                            del temp2
+                                k['vmNetwork'].append(temp2.copy())
+                                del temp2
                         del temp1
                         del dict1
         return

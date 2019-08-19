@@ -7,7 +7,7 @@
         <td class="btbg font-center">巡检id</td>
         <td class="btbg font-center">巡检时间</td>
         <td class="btbg font-center">巡检内容</td>
-        <td class="btbg font-center">巡检结果</td>
+        {#<td class="btbg font-center">巡检结果</td>#}
         <td class="btbg font-center">文档</td>
         <td class="btbg font-center">操作</td>
     </tr>
@@ -16,7 +16,7 @@
         <td class="font-center">{{ record.id }}</td>
         <td class="font-center">{{ record.check_time }}</td>
         <td class="font-center">{{ record.check_content }}</td>
-        <td class="font-center">{{ record.check_result }}</td>
+        {# <td class="font-center">{{ record.check_result }}</td>#}
         <td class="font-center">{{ record.check_doc }}</td>
         <td class="font-center">
             <form class="inline-form" method="get" action="{{ url_for('download_file', record_id=record.id) }}">

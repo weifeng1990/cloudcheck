@@ -24,7 +24,7 @@
     <tr>
         <td>
             <form>
-                <input type="checkbox" name="if_check" value="{{ host.id }}">
+                <input type="checkbox" name="if_check" value="{{ host.id }}" onselect="setBtnOk()">
             </form>
         </td>
         <td class="font-center">{{ host.id }}</td>
@@ -50,11 +50,23 @@
     <!--form  method="post" action="#" style="width:100%; text-align: right">
     <input type="submit" value="开始巡检" onclick="get_check_id()" style="width: 102px;">
     </form-->
-    <button id="btn" style="width:102px" onclick="get_check_id()">开始巡检</button>
+    <button id="btn" style="width:102px" onclick="get_check_id()" onmouseenter="isCheckOk()">开始巡检</button>
     <h2></h2>
-    <h3 id="started"></h3>
+    <h3 id="started0"></h3>
+    <h4 id="started1"></h4>
     <div id="checklog"></div>
     <script type="text/javascript">
+    function isCheckOk() {
+        var if_checks = document.getElementsByName("if_check")
+        var isTrue = false
+        for (var i=0; i<if_checks.length; i++){
+            if(if_checks[i].checked == true){
+                isTrue = true
+                break}}
+        if(isTrue == false) {
+            alert("请选择巡检设备！")
+        }}
+
     function setAllNo() {
         var role_checks = document.getElementById("role_check");
         var if_checks = document.getElementsByName("if_check");
@@ -72,31 +84,32 @@
 
     function get_check_id() {
         checklog.innerHTML = '';
-        started.innerHTML = '-----巡检日志-----';
+        started0.innerHTML = '-----巡检日志-----';
+        started1.innerHTML = '开始巡检，请耐心等待，不要关闭页面！'
         var if_checks = document.getElementsByName("if_check");
         var test = document.getElementById("test")
         var check_ids = new Array()
-        var test_data = ['test', 'ttt']
         for (var i=0; i<if_checks.length; i++){
             if (if_checks[i].checked == true){
                 var id = if_checks[i].value
                 check_ids.push(id)
             }
         }
+
         $.ajax({
-            type:'post',
-            url:"{{ url_for('check') }}",
-            data:JSON.stringify(check_ids),
+            type: 'post',
+            url: "{{ url_for('check') }}",
+            data: JSON.stringify(check_ids),
             contentType: 'application/json; charset=UTF-8',
             dataType: 'json',
-            success:function (result) {
-                $.each(result, function (i, item) {
-                    var str = '联通性检查：' + item.role + '   ' + item.ip + '   ' + item.status;
-                    var node = document.createElement("H4");
-                    var textnode = document.createTextNode(str)
-                    node.appendChild(textnode);
-                    document.getElementById("checklog").appendChild(node);
-                })
+            success: function (result) {
+                var node = document.createElement("H4");
+                var str = result.data
+                {#alert(str)#}
+                node.innerHTML = str
+                {#var textnode = document.createTextNode(str)#}
+                {#node.appendChild(textnode);#}
+                document.getElementById("checklog").appendChild(node);
             }
         })
     }

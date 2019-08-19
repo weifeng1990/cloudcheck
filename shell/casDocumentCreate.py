@@ -1,8 +1,10 @@
-
 from docx.shared import Mm
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from shell.collectData import casCollect
+from docx.shared import RGBColor, Inches
+from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml
 
 ##
 #cloudos2.0 api端口为9000
@@ -10,7 +12,14 @@ from shell.collectData import casCollect
 
 # 创建表格,默认行距为1cm
 def createTable(document, row, col):
-    table = document.add_table(row, col, style='Medium Grid 1 Accent 1')
+    # table = document.add_table(row, col, style='Medium Grid 1 Accent 1')
+    table = document.add_table(row, col, style='Table Grid')
+    table.style.font.name = u'宋体'
+    table.style.font.size = Pt(11)
+    for i in table.rows[0].cells:
+        shading_elm_2 = parse_xml(r'<w:shd {} w:fill="B0C4DE"/>'.format(nsdecls('w')))
+        i._tc.get_or_add_tcPr().append(shading_elm_2)
+        del shading_elm_2
     # table = document.add_table(row, col, style='Medium Shading 2 Accent 1')
     for i in table.rows:
         i.height = Mm(10)
@@ -32,8 +41,7 @@ def casBasicDocument(document, list1):
     h1.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
     h2 = document.add_heading('1.CAS平台基本信息')
     t1 = createTable(document, 7, 2)
-    # t1.autofit = True
-    t1.style.font.name = u'楷体'
+
     # 初始化表格
     t1.cell(0, 0).text = "巡检项"
     t1.cell(0, 1).text = "参数"
@@ -45,7 +53,9 @@ def casBasicDocument(document, list1):
     t1.cell(6, 0).text = "是否有使用临时license"
     # 参数赋值
     for i in range(6):
-        t1.cell(i + 1, 1).text = list1[i]
+        run = t1.cell(i + 1, 1).paragraphs[0].add_run(list1[i])
+        # run.font.name = '宋体'
+        # run.font.size = Pt(11)
     return
 
 
@@ -53,6 +63,22 @@ def casBasicDocument(document, list1):
 # list1
 def clusterDocument(document, list1, list2):
     h1 = document.add_heading('2.集群巡检')
+    count = 0
+    text = str()
+    for i in list2:
+      if i:
+          count += 1
+    p1 = document.add_paragraph()
+    run1 = p1.add_run("巡检小结：")
+    run1.font.name = u'宋体'
+    run1.font.size = Pt(11)
+    text = "对集群虚拟化进行巡检，巡检异常项数：" + (str)(count) + "；" + "正常项数：" + (str)(len(list2) - count)
+    p2 = document.add_paragraph()
+    p2.paragraph_format.first_line_indent = Inches(0.3)
+    run2 = p2.add_run(text)
+    run2.font.name = u'宋体'
+    run2.font.size = Pt(11)
+
     t1 = createTable(document, 7, 4)
     # 初始化表格
     t1.cell(0, 0).text = "检查内容"
@@ -85,13 +111,32 @@ def clusterDocument(document, list1, list2):
     t1.columns[2].width = Mm(20)
     # 参数赋值
     for i in range(6):
-        t1.cell(i + 1, 2).text = list1[i]
-        t1.cell(i + 1, 3).text = list2[i]
+        if not list2[i]:
+            t1.cell(i + 1, 2).paragraphs[0].add_run(list1[i])
+        else:
+            run = t1.cell(i + 1, 2).paragraphs[0].add_run(list1[i])
+            run.font.color.rgb = RGBColor(255, 0, 0)
+            t1.cell(i + 1, 3).paragraphs[0].add_run(list2[i])
     return
 
 
 def hostDocument(document, list1, list2):
     h1 = document.add_heading('3.主机巡检')
+    count = 0
+    text = str()
+    for i in list2:
+      if i:
+          count += 1
+    p1 = document.add_paragraph()
+    run1 = p1.add_run("巡检小结：")
+    run1.font.name = u'宋体'
+    run1.font.size = Pt(11)
+    text = "对主机CVK进行巡检，巡检异常项数：" + (str)(count) + "；" + "正常项数：" + (str)(len(list2) - count)
+    p2 = document.add_paragraph()
+    p2.paragraph_format.first_line_indent = Inches(0.3)
+    run2 = p2.add_run(text)
+    run2.font.name = u'宋体'
+    run2.font.size = Pt(11)
     t1 = createTable(document, 8, 4)
     # 初始化表格
     t1.cell(0, 0).text = "检查内容"
@@ -123,14 +168,34 @@ def hostDocument(document, list1, list2):
     #                      "页面，查看“状态”和“速率”是否正常。"
 
     # 参数赋值
+    shading_elm_1 = parse_xml(r'<w:shd {} w:fill="FF0000"/>'.format(nsdecls('w')))
     for i in range(7):
-        t1.cell(i + 1, 2).text = list1[i]
-        t1.cell(i + 1, 3).text = list2[i]
+        if not list2[i]:
+            t1.cell(i + 1, 2).paragraphs[0].add_run(list1[i])
+        else:
+            run = t1.cell(i + 1, 2).paragraphs[0].add_run(list1[i])
+            run.font.color.rgb = RGBColor(255, 0, 0)
+            t1.cell(i + 1, 3).paragraphs[0].add_run(list2[i])
     return
 
 
 def vmDocument(document, list1, list2):
     h1 = document.add_heading('4.虚拟机巡检')
+    count = 0
+    text = str()
+    for i in list2:
+        if i:
+            count += 1
+    p1 = document.add_paragraph()
+    run1 = p1.add_run("巡检小结：")
+    run1.font.name = u'宋体'
+    run1.font.size = Pt(11)
+    text = "对主机虚拟机进行巡检，巡检异常项数：" + (str)(count) + "；" + "正常项数：" + (str)(len(list2) - count)
+    p2 = document.add_paragraph()
+    p2.paragraph_format.first_line_indent = Inches(0.3)
+    run2 = p2.add_run(text)
+    run2.font.name = u'宋体'
+    run2.font.size = Pt(11)
     t1 = createTable(document, 8, 4)
     # 初始化表格
     t1.cell(0, 0).text = "检查内容"
@@ -160,13 +225,32 @@ def vmDocument(document, list1, list2):
     t1.cell(7, 1).text = "在<云资源>/<主机池>/<集群>/<主机>/<虚拟机>的“修改虚拟机”对话框，查看网卡类型。"
     # 参数赋值
     for i in range(7):
-        t1.cell(i + 1, 2).text = list1[i]
-        t1.cell(i + 1, 3).text = list2[i]
+        if not list2[i]:
+            t1.cell(i + 1, 2).paragraphs[0].add_run(list1[i])
+        else:
+            run = t1.cell(i + 1, 2).paragraphs[0].add_run(list1[i])
+            run.font.color.rgb = RGBColor(255, 0, 0)
+            t1.cell(i + 1, 3).paragraphs[0].add_run(list2[i])
     return
 
 
 def systemHaDocument(document, list1, list2):
     h1 = document.add_heading('5.系统可靠性巡检')
+    count = 0
+    text = str()
+    for i in list2:
+        if i:
+            count += 1
+    p1 = document.add_paragraph()
+    run1 = p1.add_run("巡检小结：")
+    run1.font.name = u'宋体'
+    run1.font.size = Pt(11)
+    text = "对系统可靠性进行巡检，巡检异常项数：" + (str)(count) + "；" + "正常项数：" + (str)(len(list2) - count)
+    p2 = document.add_paragraph()
+    p2.paragraph_format.first_line_indent = Inches(0.3)
+    run2 = p2.add_run(text)
+    run2.font.name = u'宋体'
+    run2.font.size = Pt(11)
     t1 = createTable(document, 5, 4)
     t1.style.font.name = '微软雅黑'
     t1.style.font.size = Pt(9)
@@ -185,13 +269,18 @@ def systemHaDocument(document, list1, list2):
     t1.cell(4, 1).text = "检查运行客户重要业务的虚拟机是否开启了定时备份功能。"
     # 参数赋值
     for i in range(4):
-        t1.cell(i + 1, 2).text = list1[i]
-        t1.cell(i + 1, 3).text = list2[i]
+        if not list2[i]:
+            t1.cell(i + 1, 2).paragraphs[0].add_run(list1[i])
+        else:
+            run = t1.cell(i + 1, 2).paragraphs[0].add_run(list1[i])
+            run.font.color.rgb = RGBColor(255, 0, 0)
+            t1.cell(i + 1, 3).paragraphs[0].add_run(list2[i])
     return
 
 
-def casCheck(ip, username, password, sshuser, sshpassword):
-    cas = casCollect('192.168.2.15', username=username, password=password, sshUser=sshuser, sshPassword=sshpassword)
+def casCheck(ip, sshUser, sshPassword, httpUsername, httpPassword):
+    cas = casCollect(ip, username=httpUsername, password=httpPassword, sshUser=sshUser, sshPassword=sshPassword)
+    print("cas basic##########")
     cas.cvmBasicCollect()
     cas.clusterCollect()
     cas.cvkBasicCollect()
@@ -283,7 +372,7 @@ def clusterCheck(document, cas):
     # 集群最小主机节点
     for i in cas.casInfo['clusterInfo']:
         if i['enableHA'] == '0':
-            list2[5] = "集群为开启高可靠"
+            list2[5] = "集群未开启高可靠"
         else:
             if (int)(i['HaMinHost']) > len(i['cvkInfo']):
                 list2[5] = "Ha最小节点数小正常运行主机数"
@@ -300,8 +389,8 @@ def clusterCheck(document, cas):
 
 
 #######################################
-# 主机巡检                              #
-#                                      #
+# 主机巡检                            #
+#                                     #
 ########################################
 def cvkCheck(document, cas):
     list1 = list()

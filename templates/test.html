@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <script src="/static/jquery-3.3.1.min.js"></script>
+    <script>
+        {#document.getElementById("sp1").style.width = "30%"#}
+        {#window.setInterval("change()",3000)#}
+        window.setInterval("document.getElementById('sp1').style.width += 100px", 1000)
+        $("#bar").innerText = "asfasfasfadsf"
+    </script>
+    <div>
+        <div id="bar" data-width="90%" style="background-color: red"></div>
+        <span>90%</span>
+    </div>
+    <button id="btn"  type="button" value="submit" onclick="f()">asdfsdfs</button>
+</body>
+</html>

@@ -1,11 +1,21 @@
-
 from docx.shared import Mm
+from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from shell.collectData import cloudosCollect
+from docx.shared import RGBColor, Inches
+from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml
 
 # 创建表格,默认行距为1cm
 def createTable(document, row, col):
-    table = document.add_table(row, col, style='Medium Grid 1 Accent 1')
+    # table = document.add_table(row, col, style='Medium Grid 1 Accent 1')
+    table = document.add_table(row, col, style='Table Grid')
+    table.style.font.name = u'宋体'
+    table.style.font.size = Pt(11)
+    for i in table.rows[0].cells:
+        shading_elm_2 = parse_xml(r'<w:shd {} w:fill="B0C4DE"/>'.format(nsdecls('w')))
+        i._tc.get_or_add_tcPr().append(shading_elm_2)
+        del shading_elm_2
     # table = document.add_table(row, col, style='Medium Shading 2 Accent 1')
     for i in table.rows:
         i.height = Mm(10)
@@ -49,6 +59,21 @@ def osBasicDocument(document, list1):
 
 def osPlatDocument(document, list1, list2):
     h1 = document.add_heading("2.云管理平台状态及功能检查云管理平台状态及功能检查")
+    count = 0
+    text = str()
+    for i in list2:
+        if i:
+            count += 1
+    p1 = document.add_paragraph()
+    run1 = p1.add_run("巡检小结：")
+    run1.font.name = u'宋体'
+    run1.font.size = Pt(11)
+    text = "对CloudOS云管理平台进行巡检，巡检异常项数：" + (str)(count) + "；" + "正常项数：" + (str)(len(list2) - count)
+    p2 = document.add_paragraph()
+    p2.paragraph_format.first_line_indent = Inches(0.3)
+    run2 = p2.add_run(text)
+    run2.font.name = u'宋体'
+    run2.font.size = Pt(11)
     t1 = createTable(document, 13, 4)
     t1.cell(0, 0).text = "检查内容"
     t1.cell(0, 1).text = "检查方法"
@@ -78,11 +103,13 @@ def osPlatDocument(document, list1, list2):
     t1.cell(11, 1).text = "使用云管理员账户登录H3Cloud云管理平台，单击[计算与存储/主机]菜单项，在页面中查看是否有异常状态的云主机。"
     t1.cell(12, 0).text = "云硬盘状态检查"
     t1.cell(12, 1).text = "使用云管理员账户登录H3Cloud云管理平台，单击[计算与存储/硬盘]菜单项，在页面中查看是否有异常状态的云硬盘。"
-    print(list1)
-    print(list2)
     for i in range(12):
-        t1.cell(i+1, 2).text = list1[i]
-        t1.cell(i+1, 3).text = list2[i]
+        if not list2[i]:
+            t1.cell(i + 1, 2).paragraphs[0].add_run(list1[i])
+        else:
+            run = t1.cell(i + 1, 2).paragraphs[0].add_run(list1[i])
+            run.font.color.rgb = RGBColor(255, 0, 0)
+            t1.cell(i + 1, 3).paragraphs[0].add_run(list2[i])
     return
 
 
