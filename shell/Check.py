@@ -5,7 +5,7 @@ from tcpping import tcpping
 import time, os
 
 def hostStatusCheck(hostInfo):
-    error = list()
+    error = str()
     for i in hostInfo:
         temp = str()
         #ssh端口检查
