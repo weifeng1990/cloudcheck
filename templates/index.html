@@ -83,6 +83,7 @@
     }
 
     function get_check_id() {
+        document.getElementById("btn").disabled=true;
         checklog.innerHTML = '';
         started0.innerHTML = '-----巡检日志-----';
         started1.innerHTML = '开始巡检，请耐心等待，不要关闭页面！'
@@ -110,6 +111,7 @@
                 {#var textnode = document.createTextNode(str)#}
                 {#node.appendChild(textnode);#}
                 document.getElementById("checklog").appendChild(node);
+                document.getElementById("btn").disabled=false;
             }
         })
     }

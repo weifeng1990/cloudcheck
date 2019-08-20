@@ -17,6 +17,7 @@
         <!--img alt="Avatar" class="avatar" src="{{ url_for('static', filename='images/avatar.png') }}"-->
         云计算自动运维工具
     </h2>
+    <div id="menu" style="width: 780px;float:left;">
     <nav>
         <ul>
             <li><a href="{{ url_for('index') }}">主机信息</a></li>
@@ -24,9 +25,14 @@
             <li><a href="{{ url_for('checklist') }}">巡检记录</a></li>
         </ul>
     </nav>
+    </div>
+    <div id="content" style="min-height: 450px">
     {% block content %}{% endblock %}
+    </div>
+    <div id="footer" style="clear:both;text-align:center;">
     <footer>
     <small>&copy; 2019 H3C版本所有</small>
     </footer>
+    </div>
 </body>
 </html>

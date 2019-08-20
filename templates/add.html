@@ -5,19 +5,19 @@
     <div id="info_input" style="width:480px;text-align: right;">
         <form method="post">
             主机角色：
-            <select name="role" style="width:140px" required>
+            <select name="role" style="width:154px" required>
                 {% for role in roles %}
                 <option value="{{ role }}">{{ role }}</option>
                 {% endfor %}
             </select><br>
             <!--input type="text" name="role" autocomplete="off" required><br-->
-            主机ip：   <input type="text" name="ip" autocomplete="off" required><br>
-            ssh账号：  <input type="text" name="ssh_user" autocomplete="off" required><br>
-            ssh密码：  <input type="password" name="ssh_passwd" autocomplete="off" required><br>
-            ssh端口：  <input type="text" name="ssh_port" autocomplete="off" required><br>
-            http账号： <input type="text" name="http_user" autocomplete="off" required><br>
-            http密码： <input type="password" name="http_passwd" autocomplete="off" required><br>
-            http端口： <input type="text" name="http_port" autocomplete="off" required><br>
+            主机ip：   <input type="text" name="ip" style="width: 150px" autocomplete="off" required><br>
+            ssh账号：  <input type="text" name="ssh_user" style="width: 150px" autocomplete="off" required><br>
+            ssh密码：  <input type="password" name="ssh_passwd" style="width: 150px" autocomplete="off" required><br>
+            ssh端口：  <input type="text" name="ssh_port" style="width: 150px" autocomplete="off" required><br>
+            http账号： <input type="text" name="http_user" style="width: 150px" autocomplete="off" required><br>
+            http密码： <input type="password" name="http_passwd" style="width: 150px" autocomplete="off" required><br>
+            http端口： <input type="text" name="http_port" style="width: 150px" autocomplete="off" required><br>
             <input class="btn" type="submit" name="submit" value="添加">
         </form>
     </div>

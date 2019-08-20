@@ -161,7 +161,7 @@ def check():
     else:
         text = hostStatusCheck(hostinfos)
         if text:
-            data['data'] = "巡检结果：" + text
+            data['data'] = "巡检结果：" + str(text)
             return json.dumps(data)
         else:
             print("#################################")
