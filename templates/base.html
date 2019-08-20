@@ -7,7 +7,7 @@
         {% for message in get_flashed_messages() %}
             <div class="alert">{{ message }}</div>
         {% endfor %}
-    <title>云计算自动运维工具</title>
+    <title>云计算自动巡检工具</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" type="text/css">
         <script src="/static/jquery-3.3.1.min.js"></script>
     {% endblock %}
@@ -15,7 +15,7 @@
 <body>
     <h2>
         <!--img alt="Avatar" class="avatar" src="{{ url_for('static', filename='images/avatar.png') }}"-->
-        云计算自动运维工具
+        云计算自动巡检工具
     </h2>
     <div id="menu" style="width: 780px;float:left;">
     <nav>
