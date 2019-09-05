@@ -9,18 +9,22 @@ def hostStatusCheck(hostInfo):
     for i in hostInfo:
         temp = str()
         #ssh端口检查
+        print(i)
         if not tcpping(i['ip'], i['sshPort'], 2):
+            print("ssh port invalid")
             if not temp:
                 temp = '<br/>主机'+i['ip']+'&nbspssh端口连通异常'
             else:
                 temp += ',ssh端口连通异常'
         if not tcpping(i['ip'], i['httpPort'], 2):
+            print("http port invalid")
             if not temp:
                 temp = '<br/>主机'+i['ip']+'&nbsphttp端口连通异常'
             else:
                 temp += ',http端口连通异常'
         error += temp
         del temp
+        print(error)
     return error
 
 
@@ -30,7 +34,6 @@ def Check(hostInfo):
     result = {"filename" : '', "content" : ''}
     for i in hostInfo:
         if i['role'] == 'cvm':
-            print("cas巡检")
             cas = casDocumentCreate.casCheck(i['ip'], i['sshUser'], i['sshPassword'], i['httpUser'], i['httpPassword'])
             print("cas巡检完成")
             casDocumentCreate.cvmCheck(document, cas)

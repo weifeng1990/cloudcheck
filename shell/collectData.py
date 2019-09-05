@@ -1,7 +1,8 @@
 from requests.auth import HTTPDigestAuth
 from requests.auth import HTTPBasicAuth
 import json, re, math, xmltodict, requests, paramiko
-
+import threading, time
+from multiprocessing import Pool, Lock 
 # 获取cas版本：cat /etc/cas_cvk-version | awk 'NR==1{print $1}'
 # 服务器的型号： dmidecode | grep -i product | awk 'NR==1{print $3,$4,$5 }'
 # 服务器规格：lscpu | cut -d : -f 2 | awk 'NR==4 || NR==7{print $1}';free -g | awk 'NR==2{print $2}'
@@ -11,6 +12,7 @@ import json, re, math, xmltodict, requests, paramiko
 
 class casCollect:
     # 读取ip、username，password
+    
     def __init__(self, ip, username, password, sshUser, sshPassword):
         self.host = ip
         self.url = "http://" + ip + ":8080/cas/casrs/"
@@ -141,28 +143,34 @@ class casCollect:
     ##################################################
     def cvkSharepoolCollect(self):
         for i in self.casInfo['clusterInfo']:
+            pool = Pool(processes=5)
             for k in i['cvkInfo']:
-                response = requests.get(self.url + 'host/id/' + k['id'] + '/storage', auth=self.httpAuth)
-                contxt1 = response.text
-                response.close()
-                dict1 = xmltodict.parse(contxt1)
-                list1 = list()
-                dict2 = dict()
                 k['sharePool'] = list()
-                if isinstance(dict1['list'], dict):
-                    if 'storagePool' in dict1['list']:
-                        if isinstance(dict1['list']['storagePool'], dict):
-                            list1.append(dict1['list']['storagePool'])
-                        else:
-                            list1 = dict1['list']['storagePool']
-                        for j in list1:
-                            dict2['name'] = j['name']
-                            dict2['rate'] = 1 - (float)(j['freeSize']) / (float)(j['totalSize'])
-                            dict2['path'] = j['path']
-                            k['sharePool'].append(dict2.copy())
-                            # print(k['name'], j['name'],dict2['rate'])
-                del list1
-                del dict2
+                pool.apply_async(self.cvkSharepool, args=(k,))
+            pool.close()
+            pool.join()
+        return
+
+    def cvkSharepool(self,k):
+        response = requests.get(self.url + 'host/id/' + k['id'] + '/storage', auth=self.httpAuth)
+        contxt1 = response.text
+        response.close()
+        dict1 = xmltodict.parse(contxt1)
+        list1 = list()
+        dict2 = dict()
+        if isinstance(dict1['list'], dict):
+            if 'storagePool' in dict1['list']:
+                if isinstance(dict1['list']['storagePool'], dict):
+                    list1.append(dict1['list']['storagePool'])
+                else:
+                    list1 = dict1['list']['storagePool']
+                for j in list1:
+                    dict2['name'] = j['name']
+                    dict2['rate'] = 1 - (float)(j['freeSize']) / (float)(j['totalSize'])
+                    dict2['path'] = j['path']
+                    k['sharePool'].append(dict2.copy())
+        del list1
+        del dict2
         return
 
     ##############################################################
@@ -171,53 +179,68 @@ class casCollect:
     ##############################################################
     def cvkDiskCollect(self):
         for i in self.casInfo['clusterInfo']:
+            pool = Pool(processes=5)
             for k in i['cvkInfo']:
-                response = requests.get(self.url + 'host/id/' + k['id'] + '/monitor', auth=self.httpAuth)
-                contxt1 = response.text
-                response.close()
                 k['diskRate'] = list()
-                dict1 = xmltodict.parse(contxt1)['host']['disk']
-                temp = list()
-                if isinstance(dict1, dict):
-                    temp.append(dict1)
-                else:
-                    temp = dict1.copy()
-                for h in temp:
-                    temp1 = dict()
-                    temp1['name'] = h['device']
-                    temp1['usage'] = (float)(h['usage'])
-                    k['diskRate'].append(temp1.copy())
-                    del temp1
-                del temp
+                pool.apply_async(self.cvkDisk, args=(k,))
         return
 
-
+    def cvkDisk(self, k):
+        response = requests.get(self.url + 'host/id/' + k['id'] + '/monitor', auth=self.httpAuth)
+        contxt1 = response.text
+        response.close()
+        dict2 = xmltodict.parse(contxt1)['host']
+        if 'disk' in dict2.keys():
+            dict1 = xmltodict.parse(contxt1)['host']['disk']
+            temp = list()
+            if isinstance(dict1, dict):
+                temp.append(dict1)
+            else:
+                temp = dict1.copy()
+            for h in temp:
+                temp1 = dict()
+                temp1['name'] = h['device']
+                temp1['usage'] = (float)(h['usage'])
+                k['diskRate'].append(temp1.copy())
+                del temp1
+            del temp
+        return
         ##############################################################
         # 获取CVK主机虚拟交换机信息
         ##############################################################
     def cvkVswitchCollect(self):
         for i in self.casInfo['clusterInfo']:
+            pool = Pool(processes=5)
             for k in i['cvkInfo']:
-                response = requests.get(self.url + '/host/id/' + k['id'] + '/vswitch', auth=self.httpAuth)
-                contxt1 = response.text
-                response.close()
                 k['vswitch'] = list()
-                dict1 = xmltodict.parse(contxt1)['list']
-                temp = list()
-                if isinstance(dict1, dict):
-                    if isinstance(dict1['vSwitch'], dict):
-                        temp.append(dict1['vSwitch'])
-                    else:
-                        temp = dict1['vSwitch'].copy()
-                        for h in temp:
-                            temp1 = dict()
-                            temp1['name'] = h['name']
-                            temp1['status'] = h['status']
-                            temp1['pnic'] = h['pnic']
-                            k['vswitch'].append(temp1.copy())
-                            del temp1
-                del temp
-                del dict1
+                pool.apply_async(self.cvkVswitch, args=(k,))
+            pool.close()
+            pool.join()
+        return
+    
+    def cvkVswitch(self, k):
+        response = requests.get(self.url + '/host/id/' + k['id'] + '/vswitch', auth=self.httpAuth)
+        contxt1 = response.text
+        response.close()
+        dict2 = xmltodict.parse(contxt1)
+        if 'host' in dict2.keys():
+            dict1 = dict2['host']
+            temp = list()
+            if isinstance(dict1, dict):
+                if isinstance(dict1['vSwitch'], dict):
+                    temp.append(dict1['vSwitch'])
+                else:
+                    temp = dict1['vSwitch'].copy()
+                    for h in temp:
+                        temp1 = dict()
+                        temp1['name'] = h['name']
+                        temp1['status'] = h['status']
+                        temp1['pnic'] = h['pnic']
+                        k['vswitch'].append(temp1.copy())
+                        del temp1
+            del temp
+            del dict1
+            del dict2
         return
 
     ################################################################################
@@ -225,204 +248,250 @@ class casCollect:
     ################################################################################
     def cvkStorpoolCollect(self):
         for i in self.casInfo['clusterInfo']:
+            pool = Pool(processes=5)
             for k in i['cvkInfo']:
-                response = requests.get(self.url + 'storage/pool?hostId=' + k['id'], auth=self.httpAuth)
-                contxt1 = response.text
-                response.close()
                 k['storagePool'] = list()
-                dict1 = xmltodict.parse(contxt1)['list']['storagePool']
-                temp = list()
-                if isinstance(dict1, dict):
-                    temp.append(dict1)
-                else:
-                    temp = dict1.copy()
-                for h in temp:
-                    temp1 = dict()
-                    temp1['name'] = h['name']
-                    temp1['status'] = h['status']
-                    k['storagePool'].append(temp1.copy())
-                    del temp1
-                del temp
+                pool.apply_async(self.cvkStorpool, args=(k,))
+            pool.close()
+            pool.join()
         return
-
+   
+    def cvkStorpool(self, k):
+        response = requests.get(self.url + 'storage/pool?hostId=' + k['id'], auth=self.httpAuth)
+        contxt1 = response.text
+        response.close()
+        dict1 = xmltodict.parse(contxt1)['list']['storagePool']
+        temp = list()
+        if isinstance(dict1, dict):
+           temp.append(dict1)
+        else:
+            temp = dict1.copy()
+        for h in temp:
+            temp1 = dict()
+            temp1['name'] = h['name']
+            temp1['status'] = h['status']
+            k['storagePool'].append(temp1.copy())
+            del temp1
+        del temp
+        return
     # 获取cvk主机的网卡信息
     def cvkNetsworkCollect(self):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(self.host, 22, self.sshUser, self.sshPassword, look_for_keys=False, allow_agent=False)
         for i in self.casInfo['clusterInfo']:
+            pool = Pool(processes=5)
             for k in i['cvkInfo']:
-                cmd = "ssh  " + k[
-                    'ip'] + " ifconfig -a | grep eth | awk '{print $1}' | while read line;do ethtool $line | grep -e eth -e Duplex -e Speed -e Link;done"
                 k['network'] = list()
-                stdin, stdout, stderr = ssh.exec_command(cmd)
-                temp2 = dict()
-                if not stderr.read():
-                    temp1 = stdout.read().decode()
-                    j = 0
-                    for h in temp1.split():
-                        if h == "(255)":
-                            continue
-                        if not (j - 2) % 10:
-                            temp2['name'] = h.split(':')[0]
-                        elif not (j - 4) % 10:
-                            temp2['speed'] = h.split('M')[0]
-                        elif not (j - 6) % 10:
-                            temp2['duplex'] = h
-                        elif not (j - 9) % 10:
-                            temp2['status'] = h
-                        if j > 0 and (j % 10 == 0):
-                            k['network'].append(temp2.copy())
-                        j += 1
-                    del temp1
-                else:
-                    print(stderr.read().decode())
-                del temp2
+                pool.apply_async(self.cvkNetwork, args=(k,))
+            pool.close()
+            pool.join()
+        return
+
+    def cvkNetwork(self, k):
+        cmd = "ssh  " + k[
+            'ip'] + " ifconfig -a | grep eth | awk '{print $1}' | while read line;do ethtool $line | grep -e eth -e Duplex -e Speed -e Link;done"
+        stdin, stdout, stderr = ssh.exec_command(cmd)
+        print(k['ip'] + "host network check")
+        temp2 = dict()
+        if not stderr.read():
+            temp1 = stdout.read().decode()
+            j = 0
+            for h in temp1.split():
+                if h == "(255)":
+                    continue
+                if not (j - 2) % 10:
+                    temp2['name'] = h.split(':')[0]
+                elif not (j - 4) % 10:
+                    temp2['speed'] = h.split('M')[0]
+                elif not (j - 6) % 10:
+                    temp2['duplex'] = h
+                elif not (j - 9) % 10:
+                    temp2['status'] = h
+                if j > 0 and (j % 10 == 0):
+                    k['network'].append(temp2.copy())
+                j += 1
+            del temp1
+        else:
+             print("network check ssh error")
+        del temp2
         ssh.close()
         return
 
     # 获取虚拟机的id,name,虚拟机状态，castool状态，cpu利用率，内存利用率
     def vmBasicCollect(self):
         for i in self.casInfo['clusterInfo']:
+            #pool = Pool(processes=5)
             for j in i['cvkInfo']:
                 j['vmInfo'] = list()
-                response = requests.get(self.url + 'vm/vmList?hostId=' + j['id'], auth=self.httpAuth)
-                contxt = response.text
-                response.close()
-                dict2 = xmltodict.parse(contxt)
-                if isinstance(dict2['list'], dict):
-                    if 'domain' in dict2['list']:
-                        dict1 = xmltodict.parse(contxt)['list']['domain']
-                    else:
-                        continue
-                else:
-                    continue
-                temp1 = list()
-                if isinstance(dict1, dict):
-                    temp1.append(dict1)
-                else:
-                    temp1 = dict1.copy()
-                for k in temp1:
-                    temp2 = dict()
-                    temp2['id'] = k['id']
-                    temp2['name'] = k['name']
-                    temp2['status'] = k['vmStatus']
-                    if temp2['status'] == 'running':
-                        if 'castoolsStatus' in k.keys():
-                            temp2['castoolsStatus'] = k['castoolsStatus']
-                        else:
-                            temp2['castoolsStatus'] = '0'
-                        temp2['cpuReate'] = (float)(k['cpuRate'])
-                        temp2['memRate'] = (float)(k['memRate'])
-                    j['vmInfo'].append(temp2.copy())
-                    del temp2
-                del temp1
+                self.vmBasic(j)
+               # pool.apply_async(self.vmBasic, args=(j,))
+            #pool.close()
+            #pool.join()
         return
-
+   
+    def vmBasic(self, j):
+        response = requests.get(self.url + 'vm/vmList?hostId=' + j['id'], auth=self.httpAuth)
+        contxt = response.text
+        response.close()
+        dict2 = xmltodict.parse(contxt)
+        if isinstance(dict2['list'], dict) and 'domain' in dict2['list'].keys():
+            dict1 = xmltodict.parse(contxt)['list']['domain']
+            temp1 = list()
+            if isinstance(dict1, dict):
+                 temp1.append(dict1)
+            else:
+                 temp1 = dict1.copy()
+            for k in temp1:
+                temp2 = dict()
+                temp2['id'] = k['id']
+                temp2['name'] = k['name']
+                temp2['status'] = k['vmStatus']
+                if temp2['status'] == 'running':
+                    if 'castoolsStatus' in k.keys():
+                         temp2['castoolsStatus'] = k['castoolsStatus']
+                    else:
+                         temp2['castoolsStatus'] = '0'
+                    temp2['cpuReate'] = (float)(k['cpuRate'])
+                    temp2['memRate'] = (float)(k['memRate'])
+                j['vmInfo'].append(temp2.copy())
+                del temp2
+            del temp1
+        return
+    #diskrate thread function
+     #2019/8/29
+    def vmDiskRate(self, k):
+        print("thread diskrate " + k['name'])
+        if k['status'] == 'running':
+           response = requests.get(self.url + 'vm/id/' + k['id']+'/monitor', auth=self.httpAuth)
+           contxt1 = xmltodict.parse(response.text)
+           response.close()
+           list1 = list()
+           if isinstance(contxt1['domain'], dict) and 'partition' in contxt1['domain'].keys():
+              if isinstance(contxt1['domain']['partition'], dict):
+                 list1.append(contxt1['domain']['partition'])
+              else:
+                 list1 = (contxt1['domain']['partition']).copy()
+                 dict1 = dict()
+                 for m in list1:
+                    dict1['name'] = m['device']
+                    dict1['usage'] = (float)(m['usage'])
+                    k['diskRate'].append(dict1.copy())
+           del list1
+        return
 
     #虚拟机磁盘分区利用率
     def vmDiskRateCollect(self):
+        print("into vmdiskrate function")
         for i in self.casInfo['clusterInfo']:
+            print("into cluster "+ i['name'])
             for j in i['cvkInfo']:
+                print("into cvk " + j['name'])
+                pool = Pool(processes=5)
                 for k in j['vmInfo']:
-                    if k['status'] == 'running':
-                        k['diskRate'] = list()
-                        response = requests.get(self.url + 'vm/id/' + k['id']+'/monitor', auth=self.httpAuth)
-                        contxt1 = xmltodict.parse(response.text)
-                        response.close()
-                        list1 = list()
-                        if isinstance(contxt1['domain'], dict) and 'partition' in contxt1['domain'].keys():
-                            if isinstance(contxt1['domain']['partition'], dict):
-                                list1.append(contxt1['domain']['partition'])
-                            else:
-                                list1 = (contxt1['domain']['partition']).copy()
-                            dict1 = dict()
-                            for m in list1:
-                                dict1['name'] = m['device']
-                                dict1['usage'] = (float)(m['usage'])
-                                k['diskRate'].append(dict1.copy())
-                        del list1
+                    k['diskRate'] = list()
+                    pool.apply_async(self.vmDiskRate, args=(k,))
+                pool.close()
+                pool.join()
+        return  
+    
+    ####################
+    #2019/8/29
+    #weifeng
+    ##################
+    def vmDisk(self,k):
+        print("thread "+k['name'])
+        if k['status'] == 'running':                                                                                                                                                                 
+           response = requests.get(self.url + 'vm/detail/' + k['id'], auth=self.httpAuth)                                                                                                           
+           contxt1 = xmltodict.parse(response.text)                                                                                                                                                 
+           response.close()                                                                                                                                                                         
+           dict2 = dict()                                                                                                                                                                           
+           dict1 = dict()                                                                                                                                                                           
+           if 'domain' in contxt1.keys():                                                                                                                                                           
+              if 'storage' in contxt1['domain'].keys():                                                                                                                                            
+                 dict1 = contxt1['domain']['storage']                                                                                                                                             
+              if 'network' in contxt1['domain'].keys():                                                                                                                                            
+                 dict2 = contxt1['domain']['network']                                                                                             
+           temp1 = list()                
+           if isinstance(dict1, dict):                                                                                                                                                              
+              temp1.append(dict1)                                                                                                                                                                  
+           else:                                                                                                                                                                                    
+              temp1 = dict1.copy()                                                                                                                                                                 
+           for h in temp1:                                                                                                                                                                          
+               temp2 = dict()                                                                                                                                                                       
+               if 'device' in h.keys() and  h['device'] == 'disk':                                                                                                                                                            
+                  temp2['name'] = h['deviceName']                                                                                                                                                  
+                  if 'format' in h.keys():                                                                                                                                                         
+                      temp2['format'] = h['format']                                                                                                                                                
+                  else:                                                                                                                                                                            
+                      temp2['format'] = 'NULL'                                                                                                                                                     
+                  if 'cacheType' in h.keys():                                                                                                                                                      
+                      temp2['cacheType'] = h['cacheType']                                                                                                                                          
+                  else:                                                                                                                                                                            
+                      temp2['cacheType'] = 'NULL'                                                                                                                                                  
+                  if 'path' in h.keys():                                                                                                                                                           
+                      temp2['path'] = h['path']                                                                                                                                                    
+                  else:                                                                                                                                                                            
+                      temp2['path'] = 'NULL'                                                                                                                                                       
+                      k['vmdisk'].append(temp2.copy())                                                                                                                                                 
+                  del temp2                                                                                                                                                                            
+           del temp1
+           del dict1
+           del dict2
         return
-
 
     # 虚拟机磁盘信息
     def vmDiskCollect(self):
-        for i in self.casInfo['clusterInfo']:
+        print("into vm disk collect")
+        for i in self.casInfo['clusterInfo']:            
+            print("into cluster " + i['name'])
             for j in i['cvkInfo']:
+                pool = Pool(processes=5)
                 for k in j['vmInfo']:
-                    if k['status'] == 'running':
-                        k['vmdisk'] = list()
-                        response = requests.get(self.url + 'vm/detail/' + k['id'], auth=self.httpAuth)
-                        contxt1 = xmltodict.parse(response.text)
-                        response.close()
-                        dict2 = dict()
-                        dict1 = dict()
-                        if 'domain' in contxt1.keys():
-                            if 'storage' in contxt1['domain'].keys():
-                                dict1 = contxt1['domain']['storage']
-                            if 'network' in contxt1['domain'].keys():
-                                dict2 = contxt1['domain']['network']
-                        else:
-                            continue
-                        temp1 = list()
-                        if isinstance(dict1, dict):
-                            temp1.append(dict1)
-                        else:
-                            temp1 = dict1.copy()
-                        for h in temp1:
-                            temp2 = dict()
-                            if h['device'] == 'disk':
-                                temp2['name'] = h['deviceName']
-                                if 'format' in h.keys():
-                                    temp2['format'] = h['format']
-                                else:
-                                    temp2['format'] = 'NULL'
-                                if 'cacheType' in h.keys():
-                                    temp2['cacheType'] = h['cacheType']
-                                else:
-                                    temp2['cacheType'] = 'NULL'
-                                if 'path' in h.keys():
-                                    temp2['path'] = h['path']
-                                else:
-                                    temp2['path'] = 'NULL'
-                                k['vmdisk'].append(temp2.copy())
-                            del temp2
-                        del temp1
-                        del dict1
-                        del dict2
+                    k['vmdisk'] = list()                                                                                                                                                                     
+                    pool.apply_async(self.vmDisk, args=(k,))
+                pool.close()
+                pool.join()
+        return  
+
+    def vmNetwork(self, k):
+        print("thread vmnetwork  "+k['name'])
+        if k['status'] == 'running':
+           response = requests.get(self.url + 'vm/detail/' + k['id'], auth=self.httpAuth)
+           contxt1 = xmltodict.parse(response.text)
+           response.close()
+           dict1 = dict()
+           if 'domain' in contxt1.keys():
+              if 'network' in contxt1['domain'].keys():
+                 dict1 = contxt1['domain']['network']
+                 temp1 = list()
+                 if isinstance(dict1, dict):
+                    temp1.append(dict1)
+                 else:
+                     temp1 = dict1.copy()
+                 for h in temp1:
+                     temp2 = dict()
+                     if h:
+                        temp2['name'] = h['vsName']
+                        temp2['mode'] = h['deviceModel']
+                        temp2['KernelAccelerated'] = h['isKernelAccelerated']
+                        k['vmNetwork'].append(temp2.copy())
+                     del temp2
+                 del temp1
+           del dict1
         return
+        
 
     # 虚拟机网卡巡检
     def vmNetworkCollect(self):
         for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
+                pool = Pool(processes=5)
                 for k in j['vmInfo']:
-                    if k['status'] == 'running':
-                        k['vmNetwork'] = list()
-                        response = requests.get(self.url + 'vm/detail/' + k['id'], auth=self.httpAuth)
-                        contxt1 = xmltodict.parse(response.text)
-                        response.close()
-                        dict1 = dict()
-                        if 'domain' in contxt1.keys():
-                            if 'network' in contxt1['domain'].keys():
-                                dict1 = contxt1['domain']['network']
-                        else:
-                            continue
-                        temp1 = list()
-                        if isinstance(dict1, dict):
-                            temp1.append(dict1)
-                        else:
-                            temp1 = dict1.copy()
-                        for h in temp1:
-                            temp2 = dict()
-                            if h:
-                                temp2['name'] = h['vsName']
-                                temp2['mode'] = h['deviceModel']
-                                temp2['KernelAccelerated'] = h['isKernelAccelerated']
-                                k['vmNetwork'].append(temp2.copy())
-                                del temp2
-                        del temp1
-                        del dict1
+                    k['vmNetwork'] = list()
+                    pool.apply_async(self.vmNetwork, args=(k,))
+                pool.close()
+                pool.join()
         return
 
     # cvm双机热备信息
@@ -461,7 +530,9 @@ class casCollect:
         response.close()
         text = xmltodict.parse(contxt)['list']
         list1 = list()
-        if not 'backupStrategy' in text:
+        print(type(text))
+        #if not 'backupStrategy' in text:
+        if not text:
             self.casInfo['vmBackPolicy'] = 'NONE'
         else:
             self.casInfo['vmBackPolicy'] = list()
