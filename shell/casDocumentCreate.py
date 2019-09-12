@@ -341,7 +341,7 @@ def clusterCheck(document, cas):
         if i['enableHA'] == '0':
             list2[0] += "集群" + i['name'] + " HA未开启\n"
         if i['enableLB'] == '0':
-            list2[1] = "集群" + i['name'] + " DRS未开启\n"
+            list2[1] += "集群" + i['name'] + " DRS未开启\n"
 
     # 集群下主机虚拟交换机部署是否合规
     dict1 = dict()
