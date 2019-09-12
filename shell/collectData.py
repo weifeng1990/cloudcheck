@@ -89,12 +89,13 @@ class casCollect:
         self.casInfo['clusterInfo'] = list()
         tempInfo = dict()
         for i in temp:
+            print(i)
             # 获取集群的id,name,HA状态，cvk数量，LB状态
             tempInfo['id'] = i['id']
             tempInfo['name'] = i['name']
             tempInfo['enableHA'] = i['enableHA']
             tempInfo['cvkNum'] = (int)(i['childNum'])
-            tempInfo['enableLB'] = i['enableSLB']
+            tempInfo['enableLB'] = i['enableLB']
             self.casInfo['clusterInfo'].append(tempInfo.copy())
         # 获取集群HA最小主机数量
         for i in self.casInfo['clusterInfo']:
