@@ -2,7 +2,8 @@ from requests.auth import HTTPDigestAuth
 from requests.auth import HTTPBasicAuth
 import json, re, math, xmltodict, requests, paramiko
 import threading, time
-from multiprocessing import Pool, Lock 
+from multiprocessing import Pool, Lock
+import pickle
 # 获取cas版本：cat /etc/cas_cvk-version | awk 'NR==1{print $1}'
 # 服务器的型号： dmidecode | grep -i product | awk 'NR==1{print $3,$4,$5 }'
 # 服务器规格：lscpu | cut -d : -f 2 | awk 'NR==4 || NR==7{print $1}';free -g | awk 'NR==2{print $2}'
@@ -11,16 +12,19 @@ from multiprocessing import Pool, Lock
 
 
 class casCollect:
+
     # 读取ip、username，password
-    
-    def __init__(self, ip, username, password, sshUser, sshPassword):
+    def __init__(self, ip, httpUser, httpPassword, sshUser, sshPassword):
         self.host = ip
         self.url = "http://" + ip + ":8080/cas/casrs/"
-        self.httpAuth = HTTPDigestAuth(username, password)
-        self.casInfo = dict()
+        self.httpUser = httpUser
+        self.httpPassword = httpPassword
+        self.casInfo = {}
         self.sshUser = sshUser
         self.sshPassword = sshPassword
         return
+
+
 
     # 获取cvm基础信息：版本信息、服务器版本、服务器规格、部署方式
     def cvmBasicCollect(self):
@@ -44,8 +48,7 @@ class casCollect:
             print("device dmide error")
 
         # cas版本
-        # stdin, stdout, stderr = ssh.exec_command("cat /etc/cas_cvk-version | awk 'NR==1{print $1}'")
-        stdin, stdout, stderr = ssh.exec_command("cat /etc/cas_cvk-version | head -1")
+        stdin, stdout, stderr = ssh.exec_command("cat /etc/cas_cvk-version | awk 'NR==1{print $1}'")
         if not stderr.read():
             self.casInfo['casVersion'] = stdout.read().decode()
         else:
@@ -78,29 +81,28 @@ class casCollect:
     # function：集群巡检功能      author：wf             #
     #####################################################
     def clusterCollect(self):
-        response = requests.get(self.url + 'cluster/clusters/', auth=self.httpAuth)
+        response = requests.get(self.url + 'cluster/clusters/', auth = HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt = response.text
         response.close()
         dict1 = xmltodict.parse(contxt)['list']['cluster']
-        temp = list()
+        temp = []
         if isinstance(dict1, dict):
             temp.append(dict1)
         else:
             temp = dict1.copy()
-        self.casInfo['clusterInfo'] = list()
-        tempInfo = dict()
+        self.casInfo['clusterInfo'] = []
+        tempInfo = {}
         for i in temp:
-            print(i)
             # 获取集群的id,name,HA状态，cvk数量，LB状态
             tempInfo['id'] = i['id']
             tempInfo['name'] = i['name']
             tempInfo['enableHA'] = i['enableHA']
             tempInfo['cvkNum'] = (int)(i['childNum'])
-            tempInfo['enableLB'] = i['enableLB']
+            tempInfo['enableLB'] = i['enableSLB']
             self.casInfo['clusterInfo'].append(tempInfo.copy())
         # 获取集群HA最小主机数量
         for i in self.casInfo['clusterInfo']:
-            response = requests.get(self.url + 'cluster/' + i['id'], auth=self.httpAuth)
+            response = requests.get(self.url + 'cluster/' + i['id'], auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
             contxt = response.text
             response.close()
             dict1 = xmltodict.parse(contxt)
@@ -114,18 +116,18 @@ class casCollect:
     def cvkBasicCollect(self):
         # 初始化cvk数据结构
         for i in self.casInfo['clusterInfo']:
-            i['cvkInfo'] = list()
-            response = requests.get(self.url + 'cluster/hosts?clusterId=' + i['id'], auth=self.httpAuth)
+            i['cvkInfo'] = []
+            response = requests.get(self.url + 'cluster/hosts?clusterId=' + i['id'], auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
             contxt = response.text
             response.close()
             dict1 = xmltodict.parse(contxt)['list']['host']
-            temp1 = list()
+            temp1 = []
             if isinstance(dict1, dict):
                 temp1.append(dict1)
             else:
                 temp1 = dict1.copy()
             for j in temp1:
-                temp2 = dict()
+                temp2 = {}
                 temp2['id'] = j['id']
                 temp2['name'] = j['name']
                 temp2['status'] = j['status']
@@ -145,7 +147,7 @@ class casCollect:
     ##################################################
     def cvkSharepoolCollect(self):
         for i in self.casInfo['clusterInfo']:
-            pool = Pool(processes=5)
+            pool = Pool(processes=4)
             for k in i['cvkInfo']:
                 k['sharePool'] = list()
                 pool.apply_async(self.cvkSharepool, args=(k,))
@@ -154,12 +156,12 @@ class casCollect:
         return
 
     def cvkSharepool(self,k):
-        response = requests.get(self.url + 'host/id/' + k['id'] + '/storage', auth=self.httpAuth)
+        response = requests.get(self.url + 'host/id/' + k['id'] + '/storage', auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt1 = response.text
         response.close()
         dict1 = xmltodict.parse(contxt1)
-        list1 = list()
-        dict2 = dict()
+        list1 = []
+        dict2 = {}
         if isinstance(dict1['list'], dict):
             if 'storagePool' in dict1['list']:
                 if isinstance(dict1['list']['storagePool'], dict):
@@ -181,122 +183,129 @@ class casCollect:
     ##############################################################
     def cvkDiskCollect(self):
         for i in self.casInfo['clusterInfo']:
-            pool = Pool(processes=5)
+            pool = Pool(processes=4)
             for k in i['cvkInfo']:
-                k['diskRate'] = list()
-                pool.apply_async(self.cvkDisk, args=(k,))
+                k['diskRate'] = pool.apply_async(self.cvkDisk, args=(k['id'],)).get()
+            pool.close()
+            pool.join()
         return
 
-    def cvkDisk(self, k):
-        response = requests.get(self.url + 'host/id/' + k['id'] + '/monitor', auth=self.httpAuth)
+    def cvkDisk(self, id):
+        response = requests.get(self.url + 'host/id/' + id + '/monitor', auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt1 = response.text
         response.close()
         dict2 = xmltodict.parse(contxt1)['host']
+        li = []
         if 'disk' in dict2.keys():
             dict1 = xmltodict.parse(contxt1)['host']['disk']
-            temp = list()
+            temp = []
             if isinstance(dict1, dict):
                 temp.append(dict1)
             else:
                 temp = dict1.copy()
             for h in temp:
-                temp1 = dict()
+                temp1 = {}
                 temp1['name'] = h['device']
                 temp1['usage'] = (float)(h['usage'])
-                k['diskRate'].append(temp1.copy())
+                li.append(temp1.copy())
                 del temp1
             del temp
-        return
+        return li
+
         ##############################################################
         # 获取CVK主机虚拟交换机信息
         ##############################################################
     def cvkVswitchCollect(self):
         for i in self.casInfo['clusterInfo']:
-            pool = Pool(processes=5)
+            pool = Pool(processes=4)
             for k in i['cvkInfo']:
-                k['vswitch'] = list()
-                pool.apply_async(self.cvkVswitch, args=(k,))
+                k['vswitch'] = pool.apply_async(self.cvkVswitch, args=(k['id'],)).get()
             pool.close()
             pool.join()
         return
     
-    def cvkVswitch(self, k):
-        response = requests.get(self.url + '/host/id/' + k['id'] + '/vswitch', auth=self.httpAuth)
+    def cvkVswitch(self, id):
+        response = requests.get(self.url + '/host/id/' + id + '/vswitch', auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt1 = response.text
         response.close()
         dict2 = xmltodict.parse(contxt1)
-        if 'host' in dict2.keys():
+        li = []
+        dict1 = {}
+        if not ('host' in dict2.keys() or 'list' in dict2.keys()):
+            return li
+        elif 'host' in dict2.keys():    #5.0为host
             dict1 = dict2['host']
-            temp = list()
-            if isinstance(dict1, dict):
-                if isinstance(dict1['vSwitch'], dict):
-                    temp.append(dict1['vSwitch'])
-                else:
-                    temp = dict1['vSwitch'].copy()
-                    for h in temp:
-                        temp1 = dict()
-                        temp1['name'] = h['name']
-                        temp1['status'] = h['status']
-                        temp1['pnic'] = h['pnic']
-                        k['vswitch'].append(temp1.copy())
-                        del temp1
-            del temp
-            del dict1
-            del dict2
-        return
+        elif 'list' in dict2.keys():    #3.0为list
+            dict1 = dict2['list']
+        else:
+            return li
+        temp = []
+        if isinstance(dict1, dict):
+            if isinstance(dict1['vSwitch'], dict):
+                temp.append(dict1['vSwitch'])
+            else:
+                temp = dict1['vSwitch'].copy()
+            for h in temp:
+                temp1 = {}
+                temp1['name'] = h['name']
+                temp1['status'] = h['status']
+                temp1['pnic'] = h['pnic']
+                li.append(temp1.copy())
+                del temp1
+        del temp
+        del dict1
+        del dict2
+        return li
 
     ################################################################################
     # 获取cvk主机的存储池信息
     ################################################################################
     def cvkStorpoolCollect(self):
         for i in self.casInfo['clusterInfo']:
-            pool = Pool(processes=5)
+            pool = Pool(processes=4)
             for k in i['cvkInfo']:
-                k['storagePool'] = list()
-                pool.apply_async(self.cvkStorpool, args=(k,))
+                k['storagePool'] = pool.apply_async(self.cvkStorpool, args=(k['id'],)).get()
             pool.close()
             pool.join()
         return
    
-    def cvkStorpool(self, k):
-        response = requests.get(self.url + 'storage/pool?hostId=' + k['id'], auth=self.httpAuth)
+    def cvkStorpool(self, id):
+        response = requests.get(self.url + 'storage/pool?hostId=' + id, auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt1 = response.text
         response.close()
         dict1 = xmltodict.parse(contxt1)['list']['storagePool']
-        temp = list()
+        temp = []
+        li = []
         if isinstance(dict1, dict):
            temp.append(dict1)
         else:
             temp = dict1.copy()
         for h in temp:
-            temp1 = dict()
+            temp1 = {}
             temp1['name'] = h['name']
             temp1['status'] = h['status']
-            k['storagePool'].append(temp1.copy())
+            li.append(temp1.copy())
             del temp1
         del temp
-        return
+        return li
     # 获取cvk主机的网卡信息
     def cvkNetsworkCollect(self):
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(self.host, 22, self.sshUser, self.sshPassword, look_for_keys=False, allow_agent=False)
         for i in self.casInfo['clusterInfo']:
-            pool = Pool(processes=5)
+            pool = Pool(processes=4)
             for k in i['cvkInfo']:
-                k['network'] = list()
-                pool.apply_async(self.cvkNetwork, args=(k,ssh,))
+                k['network'] = pool.apply_async(self.cvkNetwork, args=(k['ip'],)).get()
             pool.close()
             pool.join()
         return
 
-    def cvkNetwork(self, k, ssh):
-        cmd = "ssh  " + k[
-            'ip'] + " ifconfig -a | grep eth | awk '{print $1}' | while read line;do ethtool $line | grep -e eth -e Duplex -e Speed -e Link;done"
-        print(cmd)
+    def cvkNetwork(self, ip):
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(ip, 22, self.sshUser, self.sshPassword)
+        cmd = " ifconfig -a | grep eth | awk '{print $1}' | while read line;do ethtool $line | grep -e eth -e Duplex -e Speed -e Link;done"
         stdin, stdout, stderr = ssh.exec_command(cmd)
-        print(k['ip'] + "host network check")
-        temp2 = dict()
+        temp2 = {}
+        li = []
         if not stderr.read():
             temp1 = stdout.read().decode()
             j = 0
@@ -312,35 +321,31 @@ class casCollect:
                 elif not (j - 9) % 10:
                     temp2['status'] = h
                 if j > 0 and (j % 10 == 0):
-                    k['network'].append(temp2.copy())
+                    li.append(temp2.copy())
                 j += 1
             del temp1
         else:
              print("network check ssh error")
         del temp2
         ssh.close()
-        return
+        return li
 
     # 获取虚拟机的id,name,虚拟机状态，castool状态，cpu利用率，内存利用率
     def vmBasicCollect(self):
         for i in self.casInfo['clusterInfo']:
-            #pool = Pool(processes=5)
             for j in i['cvkInfo']:
-                j['vmInfo'] = list()
+                j['vmInfo'] = []
                 self.vmBasic(j)
-               # pool.apply_async(self.vmBasic, args=(j,))
-            #pool.close()
-            #pool.join()
         return
    
     def vmBasic(self, j):
-        response = requests.get(self.url + 'vm/vmList?hostId=' + j['id'], auth=self.httpAuth)
+        response = requests.get(self.url + 'vm/vmList?hostId=' + j['id'], auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt = response.text
         response.close()
         dict2 = xmltodict.parse(contxt)
         if isinstance(dict2['list'], dict) and 'domain' in dict2['list'].keys():
             dict1 = xmltodict.parse(contxt)['list']['domain']
-            temp1 = list()
+            temp1 = []
             if isinstance(dict1, dict):
                  temp1.append(dict1)
             else:
@@ -364,24 +369,24 @@ class casCollect:
     #diskrate thread function
      #2019/8/29
     def vmDiskRate(self, k):
-        print("thread diskrate " + k['name'])
+        li = []
         if k['status'] == 'running':
-           response = requests.get(self.url + 'vm/id/' + k['id']+'/monitor', auth=self.httpAuth)
+           response = requests.get(self.url + 'vm/id/' + k['id'] + '/monitor', auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
            contxt1 = xmltodict.parse(response.text)
            response.close()
-           list1 = list()
+           list1 = []
            if isinstance(contxt1['domain'], dict) and 'partition' in contxt1['domain'].keys():
               if isinstance(contxt1['domain']['partition'], dict):
                  list1.append(contxt1['domain']['partition'])
               else:
                  list1 = (contxt1['domain']['partition']).copy()
-                 dict1 = dict()
+                 dict1 = {}
                  for m in list1:
                     dict1['name'] = m['device']
                     dict1['usage'] = (float)(m['usage'])
-                    k['diskRate'].append(dict1.copy())
+                    li.append(dict1.copy())
            del list1
-        return
+        return li
 
     #虚拟机磁盘分区利用率
     def vmDiskRateCollect(self):
@@ -390,10 +395,9 @@ class casCollect:
             print("into cluster "+ i['name'])
             for j in i['cvkInfo']:
                 print("into cvk " + j['name'])
-                pool = Pool(processes=5)
+                pool = Pool(processes=4)
                 for k in j['vmInfo']:
-                    k['diskRate'] = list()
-                    pool.apply_async(self.vmDiskRate, args=(k,))
+                    k['diskRate'] = pool.apply_async(self.vmDiskRate, args=(k,)).get()
                 pool.close()
                 pool.join()
         return  
@@ -402,26 +406,26 @@ class casCollect:
     #2019/8/29
     #weifeng
     ##################
-    def vmDisk(self,k):
-        print("thread "+k['name'])
+    def vmDisk(self, k):
+        li = []
         if k['status'] == 'running':                                                                                                                                                                 
-           response = requests.get(self.url + 'vm/detail/' + k['id'], auth=self.httpAuth)                                                                                                           
+           response = requests.get(self.url + 'vm/detail/' + k['id'], auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
            contxt1 = xmltodict.parse(response.text)                                                                                                                                                 
            response.close()                                                                                                                                                                         
-           dict2 = dict()                                                                                                                                                                           
-           dict1 = dict()                                                                                                                                                                           
+           dict2 = {}
+           dict1 = {}
            if 'domain' in contxt1.keys():                                                                                                                                                           
               if 'storage' in contxt1['domain'].keys():                                                                                                                                            
                  dict1 = contxt1['domain']['storage']                                                                                                                                             
               if 'network' in contxt1['domain'].keys():                                                                                                                                            
                  dict2 = contxt1['domain']['network']                                                                                             
-           temp1 = list()                
+           temp1 = []
            if isinstance(dict1, dict):                                                                                                                                                              
               temp1.append(dict1)                                                                                                                                                                  
            else:                                                                                                                                                                                    
               temp1 = dict1.copy()                                                                                                                                                                 
            for h in temp1:                                                                                                                                                                          
-               temp2 = dict()                                                                                                                                                                       
+               temp2 = {}
                if 'device' in h.keys() and  h['device'] == 'disk':                                                                                                                                                            
                   temp2['name'] = h['deviceName']                                                                                                                                                  
                   if 'format' in h.keys():                                                                                                                                                         
@@ -436,12 +440,12 @@ class casCollect:
                       temp2['path'] = h['path']                                                                                                                                                    
                   else:                                                                                                                                                                            
                       temp2['path'] = 'NULL'                                                                                                                                                       
-                      k['vmdisk'].append(temp2.copy())                                                                                                                                                 
+                      li.append(temp2.copy())
                   del temp2                                                                                                                                                                            
            del temp1
            del dict1
            del dict2
-        return
+        return li
 
     # 虚拟机磁盘信息
     def vmDiskCollect(self):
@@ -449,25 +453,24 @@ class casCollect:
         for i in self.casInfo['clusterInfo']:            
             print("into cluster " + i['name'])
             for j in i['cvkInfo']:
-                pool = Pool(processes=5)
+                pool = Pool(processes=4)
                 for k in j['vmInfo']:
-                    k['vmdisk'] = list()                                                                                                                                                                     
-                    pool.apply_async(self.vmDisk, args=(k,))
+                    k['vmdisk'] = pool.apply_async(self.vmDisk, args=(k,)).get()
                 pool.close()
                 pool.join()
         return  
 
     def vmNetwork(self, k):
-        print("thread vmnetwork  "+k['name'])
+        li = []
         if k['status'] == 'running':
-           response = requests.get(self.url + 'vm/detail/' + k['id'], auth=self.httpAuth)
+           response = requests.get(self.url + 'vm/detail/' + k['id'], auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
            contxt1 = xmltodict.parse(response.text)
            response.close()
-           dict1 = dict()
+           dict1 = {}
            if 'domain' in contxt1.keys():
               if 'network' in contxt1['domain'].keys():
                  dict1 = contxt1['domain']['network']
-                 temp1 = list()
+                 temp1 = []
                  if isinstance(dict1, dict):
                     temp1.append(dict1)
                  else:
@@ -478,21 +481,20 @@ class casCollect:
                         temp2['name'] = h['vsName']
                         temp2['mode'] = h['deviceModel']
                         temp2['KernelAccelerated'] = h['isKernelAccelerated']
-                        k['vmNetwork'].append(temp2.copy())
+                        li.append(temp2.copy())
                      del temp2
                  del temp1
            del dict1
-        return
+        return li
         
 
     # 虚拟机网卡巡检
     def vmNetworkCollect(self):
         for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
-                pool = Pool(processes=5)
+                pool = Pool(processes=4)
                 for k in j['vmInfo']:
-                    k['vmNetwork'] = list()
-                    pool.apply_async(self.vmNetwork, args=(k,))
+                    k['vmNetwork'] = pool.apply_async(self.vmNetwork, args=(k,)).get()
                 pool.close()
                 pool.join()
         return
@@ -528,11 +530,11 @@ class casCollect:
 
     #虚拟机备份策略
     def vmBackupPolicyCollect(self):
-        response = requests.get(self.url + 'backupStrategy/backupStrategyList', auth=self.httpAuth)
+        response = requests.get(self.url + 'backupStrategy/backupStrategyList', auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt =response.text
         response.close()
         text = xmltodict.parse(contxt)['list']
-        list1 = list()
+        list1 = []
         print(type(text))
         #if not 'backupStrategy' in text:
         if not text:
@@ -543,7 +545,7 @@ class casCollect:
                 list1.append(text['backupStrategy'])
             else:
                 list1 = (text['backupStrategy']).copy()
-            dict1 = dict()
+            dict1 = {}
             for i in list1:
                 dict1['name'] = i['name']
                 dict1['state'] = i['state']
@@ -561,7 +563,7 @@ class cloudosCollect:
         self.httppassword = httppassword
         # self.token = self.getToken(ip, httpuser, httppassword)
         self.auth = HTTPBasicAuth(httpuser, httppassword)
-        self.osInfo = dict()
+        self.osInfo = {}
         return
 
 
@@ -624,7 +626,7 @@ class cloudosCollect:
 
     # 发现Node节点设备、并查询状态
     def NodeCollect(self):
-        self.osInfo["nodeInfo"] = list()
+        self.osInfo["nodeInfo"] = []
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
@@ -633,7 +635,7 @@ class cloudosCollect:
         if not stderr.read():
             line = stdout.readline()
             while line:
-                dict1 = dict()
+                dict1 = {}
                 dict1['hostName'] = line.split()[0]
                 dict1['status'] = line.split()[1]
                 self.osInfo['nodeInfo'].append(dict1)
@@ -666,13 +668,13 @@ class cloudosCollect:
         ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
         for i in self.osInfo['nodeInfo']:
             if i["status"] == 'Ready':
-                i['diskCapacity'] = list()
+                i['diskCapacity'] = []
                 cmd = "ssh\t" + i["hostName"] + "\tfdisk -l | grep /dev/mapper/centos | awk '{print $2,$5/1000/1000/1000}' | sed -e 's/://g' | sed -e 's/\/dev\/mapper\///g'"
                 stdin, stdout, stderr = ssh.exec_command(cmd)
                 text = stdout.read().decode()
                 lines = text.splitlines()
                 for j in lines:
-                    dict1 = dict()
+                    dict1 = {}
                     dict1['name'] = j.split()[0]
                     dict1['capacity'] = (float)(j.split()[1])
                     i['diskCapacity'].append(dict1.copy())
@@ -685,13 +687,13 @@ class cloudosCollect:
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
         for i in self.osInfo['nodeInfo']:
-            i['diskRate'] =list()
+            i['diskRate'] = []
             if i["status"] == 'Ready':
                 cmd = "ssh\t" + i["hostName"] + "\tdf -h | grep -v tmp | cut -d % -f 1 | awk 'NR>1{print $1,$5/100}'"
                 stdin, stdout, stderr = ssh.exec_command(cmd)
                 if not stderr.read():
                     line = stdout.readline()
-                    temp = dict()
+                    temp = {}
                     while line:
                         temp['name'] = line.split()[0]
                         temp['rate'] = (float)(line.split()[1])
@@ -745,7 +747,7 @@ class cloudosCollect:
         if not stderr.read():
             line = stdout.readline()
             while line:
-                dict1 = dict()
+                dict1 = {}
                 dict1['name'] = line.split()[0]
                 dict1['status'] = line.split()[1]
                 self.osInfo['ctainrState'].append(dict1.copy())
@@ -785,7 +787,7 @@ class cloudosCollect:
         ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
         cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 get node | awk 'NR>1{print$1}' | while read line;do echo $line $(/opt/bin/kubectl -s 127.0.0.1:8888 get pod -o wide | grep $line | wc -l);done"
         stdin, stdout, stderr = ssh.exec_command(cmd)
-        li = list()
+        li = {}
         if not stderr.read():
             line = stdout.readline()
             while line:
@@ -845,7 +847,7 @@ class cloudosCollect:
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
-        self.osInfo['serviceStatus'] = dict()
+        self.osInfo['serviceStatus'] = {}
         cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 get pod | awk 'NR>1{print $1}'| while read line;do " \
               "/opt/bin/kubectl -s 127.0.0.1:8888 describe pod $line | grep Image: |awk -v var1=$line '" \
               "{print var1,$2}' | cut -d : -f 1;done"
@@ -871,7 +873,7 @@ class cloudosCollect:
             if j.split()[1] == 'cloudos-openstack':
                 self.osInfo['serviceStatus']['cloudos-openstack'] = list()
                 for i in serviceList1:
-                    dict1 = dict()
+                    dict1 = {}
                     dict1['name'] = i
                     cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 exec " \
                           "-it\t" + j.split()[0] + "\tsystemctl status\t" + i + "| grep Active | awk '{print $3}'"
@@ -888,7 +890,7 @@ class cloudosCollect:
             elif j.split()[1] == 'cloudos-openstack-compute':
                 self.osInfo['serviceStatus']['cloudos-openstack-compute'] = list()
                 for i in serviceList2:
-                    dict1 = dict()
+                    dict1 = {}
                     dict1['name'] = i
                     cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 exec -it\t" + j.split()[
                         0] + "\tsystemctl status\t" + i + "| grep Active | awk '{print $3}'"
@@ -905,14 +907,14 @@ class cloudosCollect:
 
     # 检查云主机镜像是否正常
     def imageCollect(self):
-        self.osInfo["imagesStatus"] = list()
+        self.osInfo["imagesStatus"] = []
         respond = requests.get("http://" + self.ip + ":9000/v3/images", auth=self.auth)
         print(respond.text)
         if respond.text:
             tmp = json.loads(respond.text)
             if 'image' in tmp:
                 for i in tmp['images']:
-                    dict1 = dict()
+                    dict1 = {}
                     dict1['name'] = i['name']
                     dict1['status'] = i['status']
                     self.osInfo["imagesStatus"].append(dict1.copy())
@@ -932,7 +934,7 @@ class cloudosCollect:
                 url = "http://" + self.ip + ":9000/v2/" + i['id'] + "/servers/detail"
                 response1 = requests.get(url, auth=self.auth)
                 for j in json.loads(response1.text)['servers']:
-                    dict1 = dict()
+                    dict1 = {}
                     dict1['name'] = j['name']
                     dict1['status'] = j['status']
                     self.osInfo['vmStatus'].append(dict1.copy())
@@ -950,7 +952,7 @@ class cloudosCollect:
                 url = "http://" + self.ip + ":9000/v2/" + i['id'] + "/volumes/detail"
                 response1 = requests.get(url, auth=self.auth)
                 for j in json.loads(response1.text)['volumes']:
-                    dict1 = dict()
+                    dict1 = {}
                     dict1['name'] = j['name']
                     dict1['status'] = j['status']
                     self.osInfo['vDiskStatus'].append(dict1.copy())
@@ -958,5 +960,6 @@ class cloudosCollect:
                 response1.close()
         response.close()
         return
+
 
 
