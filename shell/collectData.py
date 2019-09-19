@@ -44,7 +44,8 @@ class casCollect:
             print("device dmide error")
 
         # cas版本
-        stdin, stdout, stderr = ssh.exec_command("cat /etc/cas_cvk-version | awk 'NR==1{print $1}'")
+        # stdin, stdout, stderr = ssh.exec_command("cat /etc/cas_cvk-version | awk 'NR==1{print $1}'")
+        stdin, stdout, stderr = ssh.exec_command("cat /etc/cas_cvk-version | head -1")
         if not stderr.read():
             self.casInfo['casVersion'] = stdout.read().decode()
         else:
@@ -284,14 +285,15 @@ class casCollect:
             pool = Pool(processes=5)
             for k in i['cvkInfo']:
                 k['network'] = list()
-                pool.apply_async(self.cvkNetwork, args=(k,))
+                pool.apply_async(self.cvkNetwork, args=(k,ssh,))
             pool.close()
             pool.join()
         return
 
-    def cvkNetwork(self, k):
+    def cvkNetwork(self, k, ssh):
         cmd = "ssh  " + k[
             'ip'] + " ifconfig -a | grep eth | awk '{print $1}' | while read line;do ethtool $line | grep -e eth -e Duplex -e Speed -e Link;done"
+        print(cmd)
         stdin, stdout, stderr = ssh.exec_command(cmd)
         print(k['ip'] + "host network check")
         temp2 = dict()
