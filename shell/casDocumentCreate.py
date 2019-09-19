@@ -279,36 +279,51 @@ def systemHaDocument(document, list1, list2):
     return
 
 
-def casCheck(ip, httpUsername, httpPassword, sshUser, sshPassword):
+def casCheck(ip, httpUsername, httpPassword, sshUser, sshPassword, logfile):
     cas = casCollect(ip, httpUsername, httpPassword, sshUser, sshPassword)
-    print("cas basic##########")
+    logfile.addLog("cas basic check")
+    print("cas basic check########")
     cas.cvmBasicCollect()
-    print("cas cluster########")
+    logfile.addLog("cas cluster check")
+    print("cas cluster check########")
     cas.clusterCollect()
+    logfile.addLog("cvk Basic check")
     print("cvk Basic###########")
     cas.cvkBasicCollect()
+    logfile.addLog("cvk disk check")
     print("cvk disk###########")
     cas.cvkDiskCollect()
+    logfile.addLog("cvk vswitch check")
     print("cvk vswitch ########")
     cas.cvkVswitchCollect()
+    logfile.addLog("cvk storpool check")
     print("cvk storpool###########")
     cas.cvkStorpoolCollect()
+    logfile.addLog("cvk sharepool check")
     print("cvk sharepool#########")
     cas.cvkSharepoolCollect()
+    logfile.addLog("cvk network check")
     print("cvk network###########")
     cas.cvkNetsworkCollect()
+    logfile.addLog("vm basic check")
     print("vm basic###########")
     cas.vmBasicCollect()
+    logfile.addLog("vm disk check")
     print("vm disk########")
     cas.vmDiskCollect()
+    logfile.addLog("vm network check")
     print("vm network########")
     cas.vmNetworkCollect()
+    logfile.addLog("vm diskrate check")
     print("vm diskrate##########")
     cas.vmDiskRateCollect()
+    logfile.addLog("cvm backup policy check")
     print("cvm backup policy#########")
     cas.cvmBackupEnbleCollect()
+    logfile.addLog("cvm ha policy check")
     print("cvm ha policy#######")
     cas.cvmHACollect()
+    logfile.addLog("vm backup policy check")
     print("vm backup policy########")
     cas.vmBackupPolicyCollect()
     return cas
@@ -588,7 +603,7 @@ def vmCheck(document, cas):
 ####################
 # cvm可靠性巡检
 ####################
-def cvmHaChech(document, cas):
+def cvmHaCheck(document, cas):
     list1 = []
     list2 = ['' for n in range(4)]
 

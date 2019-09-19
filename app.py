@@ -2,8 +2,11 @@ from flask import Flask, render_template, request, url_for, redirect, flash, jso
 from flask_sqlalchemy import SQLAlchemy
 import sys, os, click
 from datetime import datetime
+import time
 from shell.Check import hostStatusCheck
 from shell.Check import Check
+from applog import Applog
+
 
 
 WIN = sys.platform.startswith('win')
@@ -16,6 +19,8 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = prefix + os.path.join(app.root_path, 'data.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # 关闭对模型修改的监控
 app.config['SECRET_KEY'] = 'dev'
+logfile = Applog()
+
 # 在扩展类实例化前加载配置
 db = SQLAlchemy(app)  # 初始化扩展，传入程序实例 app
 
@@ -111,8 +116,6 @@ def delete(host_id):
     return redirect(url_for('index'))
 
 def record(result):
-    # time_now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    # time_now = datetime.now()
     time_now = datetime.strptime(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),"%Y-%m-%d %H:%M:%S")
     result1 = {'time':time_now, 'content':'cvm;cloudos', 'result':'yes', 'doc':'test.txt'}
     result1['doc'] = result['filename']
@@ -131,7 +134,6 @@ def delete_record(record_id):
     record = Record.query.get_or_404(record_id)
     db.session.delete(record)
     db.session.commit()
-    print("################################", record.check_doc)
     filename = os.getcwd() + '\\check_result\\' + record.check_doc
     if os.path.exists(filename):
         os.remove(filename)
@@ -142,10 +144,7 @@ def delete_record(record_id):
 
 @app.route('/check', methods=['GET', 'POST'])
 def check():
-    # check_id = check_ids[0]
     check_ids = request.get_json()
-    # print(check_ids)
-    # check_id = check_ids[0]
     hostinfos = []
     for check_id in check_ids:
         host = Host.query.get_or_404(check_id)
@@ -154,48 +153,36 @@ def check():
                     'sshPassword': host.ssh_passwd, 'httpPort': host.http_port, 'httpUser': host.http_user,
                     'httpPassword': host.http_passwd}
         hostinfos.append(hostinfo)
-    data = dict()
+    data = {}
     if not hostinfos:
+        logfile.addLog("not find any device")
         data['data'] = "未添加设备"
-        return json.dumps(data)
     else:
         text = hostStatusCheck(hostinfos)
         if text:
             data['data'] = "巡检结果：" + str(text)
-            return json.dumps(data)
         else:
-            print("#################################")
-            result = Check(hostinfos)
+            result = Check(hostinfos, logfile)
             record(result)
             data['data'] = "巡检结果：" + "巡检完成"
-            return json.dumps(data)
-
-
-
-    # print(hostinfos)
-    # #  = function(hostinfos)
-    # result = record()
-    # print(result)
-    # return json.dumps(hostinfos)
+            logfile.addLog("completed check")
+    return json.dumps(data)
 
 @app.route("/checklist", methods=['GET'])
 def checklist():
     records = Record.query.order_by(Record.check_time.desc()).all()
-    print('debug')
     return render_template('record.html', records=records)
 
 
 @app.route("/download/<int:record_id>", methods=['GET'])
 def download_file(record_id):
     # 需要知道2个参数, 第1个参数是本地目录的path, 第2个参数是文件名(带扩展名)
-    print("######################", record_id)
     directory = os.path.join(os.getcwd(), 'check_result')  # 假设在当前目录
     record = Record.query.get_or_404(record_id)
     filename = record.check_doc
     del record
-    print("##############################", filename)
     return send_from_directory(directory, filename, as_attachment=True)
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', debug=True, port=5001)

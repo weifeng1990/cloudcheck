@@ -26,26 +26,35 @@ def hostStatusCheck(hostInfo):
     return error
 
 
-def Check(hostInfo):
+def Check(hostInfo, logfile):
     status = hostStatusCheck(hostInfo)
     document = Document()
     result = {"filename" : '', "content" : ''}
+    logfile.addLog("check begin")
     for i in hostInfo:
         if i['role'] == 'cvm':
-            cas = casDocumentCreate.casCheck(i['ip'], i['httpUser'], i['httpPassword'], i['sshUser'], i['sshPassword'])
-            print("cas巡检完成")
+            logfile.addLog("cas collectdata begin")
+            cas = casDocumentCreate.casCheck(i['ip'], i['httpUser'], i['httpPassword'], i['sshUser'], i['sshPassword'],logfile)
+            logfile.addLog("cvm check document create")
             casDocumentCreate.cvmCheck(document, cas)
+            logfile.addLog("cas cluster document creat")
             casDocumentCreate.clusterCheck(document, cas)
+            logfile.addLog("cas cvk cluster document create")
             casDocumentCreate.cvkCheck(document, cas)
+            logfile.addLog("cas vm check document create")
             casDocumentCreate.vmCheck(document, cas)
-            casDocumentCreate.cvmHaChech(document, cas)
+            logfile.addLog("cas cvm ha lb document crate")
+            casDocumentCreate.cvmHaCheck(document, cas)
+
         elif i['role'] == 'cloudos':
-            print("cloduos巡检")
+            logfile.addLog("cloudos check")
             cloud = cloudosDocumentCreate.cloudosCheck(i['ip'], i['sshUser'], i['sshPassword'], i['httpUser'], i['httpPassword'])
-            print("cloduos巡检")
-            cloudosDocumentCreate.osBasicCheck(document, cloud)
-            cloudosDocumentCreate.osPlatCheck(document, cloud)
+            logfile.addLog("cloudos basic info check")
+            cloudosDocumentCreate.osBasicCheck(document, cloud, logfile)
+            logfile.addLog("cloudos plat check")
+            cloudosDocumentCreate.osPlatCheck(document, cloud, logfile)
         result['content'] += i['role'] + '\t'
+
     filename = "巡检文档" + time.strftime("%Y%m%d%H%M", time.localtime())+".docx"
     path = os.getcwd() + "//check_result//" + filename
     document.save(path)

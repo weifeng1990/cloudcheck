@@ -1,10 +1,8 @@
 from requests.auth import HTTPDigestAuth
 from requests.auth import HTTPBasicAuth
 import json, re, math, xmltodict, requests, paramiko
-import threading, time
 from multiprocessing import Pool, Lock
-import pickle
-# 获取cas版本：cat /etc/cas_cvk-version | awk 'NR==1{print $1}'
+# 获取cas版本：cat /etc/cas_cvk-version | head -1
 # 服务器的型号： dmidecode | grep -i product | awk 'NR==1{print $3,$4,$5 }'
 # 服务器规格：lscpu | cut -d : -f 2 | awk 'NR==4 || NR==7{print $1}';free -g | awk 'NR==2{print $2}'
 # 集群节点数：crm status | grep Online | awk '{print NF-3}'
@@ -30,7 +28,6 @@ class casCollect:
     def cvmBasicCollect(self):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-        print("ssh连接##########", self.host, self.sshUser, self.sshPassword)
         ssh.connect(self.host, 22, self.sshUser, self.sshPassword)
         #服务器硬件型号
         stdin, stdout, stderr = ssh.exec_command("dmidecode | grep -i product | awk 'NR==1{print $3,$4,$5 }'")
@@ -57,7 +54,8 @@ class casCollect:
         #部署方式
         stdin, stdout, stderr = ssh.exec_command("crm status | grep Online | awk '{print NF-3}'")
         if not stderr.read():
-            text = stdout.read().decode()
+            text = stdout.read().decode().splitlines()[0]
+            print("#####部署方式")
             if text == '1':
                 self.casInfo["installType"] = "单机部署"
             else :
@@ -98,7 +96,7 @@ class casCollect:
             tempInfo['name'] = i['name']
             tempInfo['enableHA'] = i['enableHA']
             tempInfo['cvkNum'] = (int)(i['childNum'])
-            tempInfo['enableLB'] = i['enableSLB']
+            tempInfo['enableLB'] = i['enableLB']
             self.casInfo['clusterInfo'].append(tempInfo.copy())
         # 获取集群HA最小主机数量
         for i in self.casInfo['clusterInfo']:
@@ -155,7 +153,7 @@ class casCollect:
             pool.join()
         return
 
-    def cvkSharepool(self,k):
+    def cvkSharepool(self, k):
         response = requests.get(self.url + 'host/id/' + k['id'] + '/storage', auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt1 = response.text
         response.close()
@@ -366,6 +364,7 @@ class casCollect:
                 del temp2
             del temp1
         return
+
     #diskrate thread function
      #2019/8/29
     def vmDiskRate(self, k):
@@ -390,11 +389,8 @@ class casCollect:
 
     #虚拟机磁盘分区利用率
     def vmDiskRateCollect(self):
-        print("into vmdiskrate function")
         for i in self.casInfo['clusterInfo']:
-            print("into cluster "+ i['name'])
             for j in i['cvkInfo']:
-                print("into cvk " + j['name'])
                 pool = Pool(processes=4)
                 for k in j['vmInfo']:
                     k['diskRate'] = pool.apply_async(self.vmDiskRate, args=(k,)).get()
@@ -449,9 +445,7 @@ class casCollect:
 
     # 虚拟机磁盘信息
     def vmDiskCollect(self):
-        print("into vm disk collect")
-        for i in self.casInfo['clusterInfo']:            
-            print("into cluster " + i['name'])
+        for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
                 pool = Pool(processes=4)
                 for k in j['vmInfo']:
@@ -535,7 +529,6 @@ class casCollect:
         response.close()
         text = xmltodict.parse(contxt)['list']
         list1 = []
-        print(type(text))
         #if not 'backupStrategy' in text:
         if not text:
             self.casInfo['vmBackPolicy'] = 'NONE'
