@@ -5,6 +5,7 @@ from shell.collectData import casCollect
 from docx.shared import RGBColor, Inches
 from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
+from multiprocessing import Pool
 
 ##
 #cloudos2.0 api端口为9000
@@ -64,7 +65,7 @@ def casBasicDocument(document, list1):
 def clusterDocument(document, list1, list2):
     h1 = document.add_heading('2.集群巡检')
     count = 0
-    text = str()
+    text = ''
     for i in list2:
       if i:
           count += 1
@@ -123,7 +124,7 @@ def clusterDocument(document, list1, list2):
 def hostDocument(document, list1, list2):
     h1 = document.add_heading('3.主机巡检')
     count = 0
-    text = str()
+    text = ''
     for i in list2:
       if i:
           count += 1
@@ -182,7 +183,7 @@ def hostDocument(document, list1, list2):
 def vmDocument(document, list1, list2):
     h1 = document.add_heading('4.虚拟机巡检')
     count = 0
-    text = str()
+    text = ''
     for i in list2:
         if i:
             count += 1
@@ -237,7 +238,7 @@ def vmDocument(document, list1, list2):
 def systemHaDocument(document, list1, list2):
     h1 = document.add_heading('5.系统可靠性巡检')
     count = 0
-    text = str()
+    text = ''
     for i in list2:
         if i:
             count += 1
@@ -278,8 +279,8 @@ def systemHaDocument(document, list1, list2):
     return
 
 
-def casCheck(ip, sshUser, sshPassword, httpUsername, httpPassword):
-    cas = casCollect(ip, username=httpUsername, password=httpPassword, sshUser=sshUser, sshPassword=sshPassword)
+def casCheck(ip, httpUsername, httpPassword, sshUser, sshPassword):
+    cas = casCollect(ip, httpUsername, httpPassword, sshUser, sshPassword)
     print("cas basic##########")
     cas.cvmBasicCollect()
     print("cas cluster########")
@@ -315,7 +316,7 @@ def casCheck(ip, sshUser, sshPassword, httpUsername, httpPassword):
 
 # cvm平台信息巡检
 def cvmCheck(document, cas):
-    list1 = list()
+    list1 = []
     list1.append(cas.casInfo['productVersion'])
     list1.append(cas.casInfo['deviceDmide'])
     list1.append(cas.casInfo['casVersion'])
@@ -331,7 +332,7 @@ def cvmCheck(document, cas):
 # 集群巡检        #
 ##################
 def clusterCheck(document, cas):
-    list1 = list()
+    list1 = []
     list2 = ['' for n in range(7)]
 
     # 集群是否开启HA和DRS
@@ -341,7 +342,7 @@ def clusterCheck(document, cas):
         if i['enableHA'] == '0':
             list2[0] += "集群" + i['name'] + " HA未开启\n"
         if i['enableLB'] == '0':
-            list2[1] += "集群" + i['name'] + " DRS未开启\n"
+            list2[1] = "集群" + i['name'] + " DRS未开启\n"
 
     # 集群下主机虚拟交换机部署是否合规
     dict1 = dict()
@@ -356,8 +357,8 @@ def clusterCheck(document, cas):
             list2[2] += "集群" + i['name'] + "下交换机的部署不合规\n"
 
     # cvk共享存储池部署是否一致
-    dict1 = dict()  # 存储集群下的所有共享存储池
-    dict2 = dict()  # 存储主机下的共享存储池
+    dict1 = {}  # 存储集群下的所有共享存储池
+    dict2 = {}  # 存储主机下的共享存储池
     for i in cas.casInfo['clusterInfo']:
         dict1[i['name']] = set()
         for j in i['cvkInfo']:
@@ -407,10 +408,10 @@ def clusterCheck(document, cas):
 #                                     #
 ########################################
 def cvkCheck(document, cas):
-    list1 = list()
+    list1 = []
     list2 = ['' for n in range(7)]
     for i in cas.casInfo['clusterInfo']:
-        dict1 = dict()
+        dict1 = {}
         for j in i['cvkInfo']:
             dict1[j['name']] = ''
             # 主机状态检测
@@ -485,12 +486,12 @@ def cvkCheck(document, cas):
 ########################################
 
 def vmCheck(document, cas):
-    list1 = list()
+    list1 = []
     list2 = ['' for n in range(7)]
     for i in cas.casInfo['clusterInfo']:
         for j in i['cvkInfo']:
-            dict1 = dict()
-            dict2 = dict()
+            dict1 = {}
+            dict2 = {}
             for k in j['vmInfo']:
                 # print(k)
                 # 虚拟机状态
@@ -588,7 +589,7 @@ def vmCheck(document, cas):
 # cvm可靠性巡检
 ####################
 def cvmHaChech(document, cas):
-    list1 = list()
+    list1 = []
     list2 = ['' for n in range(4)]
 
     # 虚拟交换机的是否配置冗余链路
@@ -622,12 +623,16 @@ def cvmHaChech(document, cas):
 
 
 
-
-# document = openDocument()
-# cas = casCheck('192.168.2.15', 'admin', 'admin', 'root', 'h3c.com!')
-# cvmCheck(document, cas)
-# clusterCheck(document, cas)
-# cvkCheck(document, cas)
-# vmCheck(document, cas)
-# cvmHaChech(document, cas)
-# document.save('test1.docx')
+# if __name__ == '__main__':
+#     cas = casCheck('192.168.2.5', 'admin', 'admin', 'root', 'h3c.com!')
+#     print(cas.casInfo)
+#     for i in cas.casInfo['clusterInfo']:
+#         for j in i['cvkInfo']:
+#             print(j)
+    # document = openDocument()
+    # cvmCheck(document, cas)
+    # clusterCheck(document, cas)
+    # cvkCheck(document, cas)
+    # vmCheck(document, cas)
+    # cvmHaChech(document, cas)
+    # document.save('test1.docx')
