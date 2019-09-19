@@ -1,0 +1,113 @@
+2019-09-19 11:36:25  check begin
+2019-09-19 11:36:25  cas collectdata begin
+2019-09-19 11:36:25  cas basic check
+2019-09-19 11:36:26  cas cluster check
+2019-09-19 11:36:26  cvk Basic check
+2019-09-19 11:36:27  cvk disk check
+2019-09-19 11:36:33  cvk vswitch check
+2019-09-19 11:36:42  cvk storpool check
+2019-09-19 11:36:49  cvk sharepool check
+2019-09-19 11:36:56  cvk network check
+2019-09-19 11:37:02  vm basic check
+2019-09-19 11:37:03  vm disk check
+2019-09-19 11:37:19  vm network check
+2019-09-19 11:37:38  vm diskrate check
+2019-09-19 11:37:52  cvm backup policy check
+2019-09-19 11:37:53  cvm ha policy check
+2019-09-19 11:37:54  vm backup policy check
+2019-09-19 11:37:54  cvm check document create
+2019-09-19 11:37:54  cas cluster document creat
+2019-09-19 11:37:54  cas cvk cluster document create
+2019-09-19 11:37:54  cas vm check document create
+2019-09-19 11:37:54  cas cvm ha lb document crate
+2019-09-19 13:49:50  check begin
+2019-09-19 13:49:50  cas collectdata begin
+2019-09-19 13:49:50  cas basic check
+2019-09-19 13:49:51  cas cluster check
+2019-09-19 13:49:51  cvk Basic check
+2019-09-19 13:49:52  cvk disk check
+2019-09-19 13:49:59  cvk vswitch check
+2019-09-19 13:50:08  cvk storpool check
+2019-09-19 13:51:42  check begin
+2019-09-19 13:51:42  cas collectdata begin
+2019-09-19 13:51:42  cas basic check
+2019-09-19 13:51:43  cas cluster check
+2019-09-19 13:51:43  cvk Basic check
+2019-09-19 13:51:43  cvk disk check
+2019-09-19 13:51:50  cvk vswitch check
+2019-09-19 13:52:49  check begin
+2019-09-19 13:52:49  cas collectdata begin
+2019-09-19 13:52:49  cas basic check
+2019-09-19 13:52:51  cas cluster check
+2019-09-19 13:52:51  cvk Basic check
+2019-09-19 13:52:51  cvk disk check
+2019-09-19 13:52:58  cvk vswitch check
+2019-09-19 13:53:51  check begin
+2019-09-19 13:53:51  cas collectdata begin
+2019-09-19 13:53:51  cas basic check
+2019-09-19 13:53:52  cas cluster check
+2019-09-19 13:53:52  cvk Basic check
+2019-09-19 13:53:53  cvk disk check
+2019-09-19 13:53:59  cvk vswitch check
+2019-09-19 13:54:07  cvk storpool check
+2019-09-19 13:54:14  cvk sharepool check
+2019-09-19 13:54:20  cvk network check
+2019-09-19 13:54:27  vm basic check
+2019-09-19 13:54:28  vm disk check
+2019-09-19 13:54:42  vm network check
+2019-09-19 13:54:59  vm diskrate check
+2019-09-19 13:55:13  cvm backup policy check
+2019-09-19 13:55:13  cvm ha policy check
+2019-09-19 13:55:14  vm backup policy check
+2019-09-19 13:55:14  cvm check document create
+2019-09-19 13:55:14  cas cluster document creat
+2019-09-19 13:55:14  cas cvk cluster document create
+2019-09-19 13:55:14  cas vm check document create
+2019-09-19 13:55:14  cas cvm ha lb document crate
+2019-09-19 13:55:15  completed check
+2019-09-19 14:05:48  check begin
+2019-09-19 14:05:48  cas collectdata begin
+2019-09-19 14:05:48  cas basic check
+2019-09-19 14:05:49  cas cluster check
+2019-09-19 14:05:49  cvk Basic check
+2019-09-19 14:05:50  cvk disk check
+2019-09-19 14:05:58  cvk vswitch check
+2019-09-19 14:06:08  cvk storpool check
+2019-09-19 14:06:16  cvk sharepool check
+2019-09-19 14:06:27  cvk network check
+2019-09-19 14:06:35  vm basic check
+2019-09-19 14:06:36  vm disk check
+2019-09-19 14:06:53  vm network check
+2019-09-19 14:07:08  vm diskrate check
+2019-09-19 14:07:27  cvm backup policy check
+2019-09-19 14:07:28  cvm ha policy check
+2019-09-19 14:07:29  vm backup policy check
+2019-09-19 14:07:29  cvm check document create
+2019-09-19 14:07:29  cas cluster document creat
+2019-09-19 14:07:29  cas cvk cluster document create
+2019-09-19 14:07:29  cas vm check document create
+2019-09-19 14:07:29  cas cvm ha lb document crate
+2019-09-19 14:07:29  completed check
+2019-09-19 15:06:53  check begin
+2019-09-19 15:06:53  cas collectdata begin
+2019-09-19 15:06:53  cas basic check
+2019-09-19 15:06:54  cas cluster check
+2019-09-19 15:06:55  cvk Basic check
+2019-09-19 15:06:55  cvk disk check
+2019-09-19 15:07:02  cvk vswitch check
+2019-09-19 15:07:11  cvk storpool check
+2019-09-19 15:07:17  cvk sharepool check
+2019-09-19 15:07:27  cvk network check
+2019-09-19 15:07:34  vm basic check
+2019-09-19 15:07:35  vm disk check
+2019-09-19 15:07:50  vm network check
+2019-09-19 15:08:09  vm diskrate check
+2019-09-19 15:08:24  cvm backup policy check
+2019-09-19 15:08:24  cvm ha policy check
+2019-09-19 15:08:25  vm backup policy check
+2019-09-19 15:08:25  cvm check document create
+2019-09-19 15:08:25  cas cluster document creat
+2019-09-19 15:08:25  cas cvk cluster document create
+2019-09-19 15:08:25  cas vm check document create
+2019-09-19 15:08:26  cas cvm ha lb document crate
+2019-09-19 15:08:26  completed check
