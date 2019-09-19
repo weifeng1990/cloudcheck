@@ -7,6 +7,7 @@ class Applog :
 
     def addLog(self, log):
         log = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + "  " + log
+        print(log)
         self.fp.write(log + '\n')
         self.fp.flush()
         return

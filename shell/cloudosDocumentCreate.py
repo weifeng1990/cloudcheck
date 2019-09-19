@@ -22,23 +22,39 @@ def createTable(document, row, col):
     return table
 
 #数据采集、巡检
-def cloudosCheck(ip, sshuser, sshpassword, httpuser, httppassword):
+def cloudosCheck(ip, sshuser, sshpassword, httpuser, httppassword, logfile):
     os = cloudosCollect(ip, sshuser, sshpassword, httpuser, httppassword)
+    logfile.addLog("cloudos Node find ")
     os.NodeCollect()
+    logfile.addLog("find masker node")
     os.findMaster()
+    logfile.addLog("host disk rate check")
     os.diskRateCollect()
+    logfile.addLog("host memory rate check")
     os.memRateCollect()
+    logfile.addLog("host cpu rate check")
     os.cpuRateCollect()
+    logfile.addLog("k8s container find")
     os.ctainrStateCollect()
+    logfile.addLog("k8s images finnd")
     os.dockerImageCollect()
+    logfile.addLog("share storage error check")
     os.shareStorErrorCollect()
+    logfile.addLog("k8s container service check")
     os.ctainrServiceCollect()
+    logfile.addLog("k8s cluster container loadbalance check")
     os.ctainrLBCollect()
+    logfile.addLog("vm images check")
     os.imageCollect()
+    logfile.addLog("vm status check")
     os.vmCollect()
+    logfile.addLog("cloud disk check")
     os.vdiskCollect()
+    logfile.addLog("cloudos basic check")
     os.cloudosBasicCellect()
+    logfile.addLog("disk rate check")
     os.diskCapacity()
+    logfile.addLog("node ntp time check")
     os.nodeNtpTimeCollect()
     return os
 #
@@ -127,10 +143,10 @@ def osBasicCheck(document, os):
     osBasicDocument(document, list1)
     return
 
+
 def osPlatCheck(document, os):
     list1 = list()
     list2 = ['' for n in range(12)]
-
     for i in os.osInfo['nodeInfo']:
         #检查分区是否合规
         temp = str()

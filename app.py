@@ -158,6 +158,7 @@ def check():
         logfile.addLog("not find any device")
         data['data'] = "未添加设备"
     else:
+        logfile.addLog("#####################check begin###########################")
         text = hostStatusCheck(hostinfos)
         if text:
             data['data'] = "巡检结果：" + str(text)
@@ -165,7 +166,7 @@ def check():
             result = Check(hostinfos, logfile)
             record(result)
             data['data'] = "巡检结果：" + "巡检完成"
-            logfile.addLog("completed check")
+            logfile.addLog("######################completed check############################")
     return json.dumps(data)
 
 @app.route("/checklist", methods=['GET'])

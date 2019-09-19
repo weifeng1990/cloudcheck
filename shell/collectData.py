@@ -55,7 +55,6 @@ class casCollect:
         stdin, stdout, stderr = ssh.exec_command("crm status | grep Online | awk '{print NF-3}'")
         if not stderr.read():
             text = stdout.read().decode().splitlines()[0]
-            print("#####部署方式")
             if text == '1':
                 self.casInfo["installType"] = "单机部署"
             else :
@@ -452,7 +451,7 @@ class casCollect:
                     k['vmdisk'] = pool.apply_async(self.vmDisk, args=(k,)).get()
                 pool.close()
                 pool.join()
-        return  
+        return
 
     def vmNetwork(self, k):
         li = []
@@ -581,8 +580,6 @@ class cloudosCollect:
 
         data['auth']['identity']['password']['user']['name'] = username
         data['auth']['identity']['password']['user']['password'] = password
-        print(username,password)
-        print(json.dumps(data))
         headers = {'content-type': 'application/json', 'Accept': 'application/json', 'X-Auth-Token': ''}
         url = "http://" + ip + ":9000/v3/auth/tokens"
         respond = requests.post(url, json.dumps(data), headers=headers)
@@ -780,11 +777,11 @@ class cloudosCollect:
         ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
         cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 get node | awk 'NR>1{print$1}' | while read line;do echo $line $(/opt/bin/kubectl -s 127.0.0.1:8888 get pod -o wide | grep $line | wc -l);done"
         stdin, stdout, stderr = ssh.exec_command(cmd)
-        li = {}
+        li = []
         if not stderr.read():
             line = stdout.readline()
             while line:
-                dict1 = dict()
+                dict1 = {}
                 dict1['NodeName'] = line.split()[0]
                 dict1['ctainrNum'] = int(line.split()[1])
                 li.append(dict1.copy())
@@ -902,7 +899,6 @@ class cloudosCollect:
     def imageCollect(self):
         self.osInfo["imagesStatus"] = []
         respond = requests.get("http://" + self.ip + ":9000/v3/images", auth=self.auth)
-        print(respond.text)
         if respond.text:
             tmp = json.loads(respond.text)
             if 'image' in tmp:
