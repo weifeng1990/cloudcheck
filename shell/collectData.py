@@ -48,7 +48,7 @@ class casCollect:
             print("device dmide error")
 
         # cas版本
-        stdin, stdout, stderr = ssh.exec_command("cat /etc/cas_cvk-version | awk 'NR==1{print $1}'")
+        stdin, stdout, stderr = ssh.exec_command("cat /etc/cas_cvk-version | head -1")
         if not stderr.read():
             self.casInfo['casVersion'] = stdout.read().decode()
         else:
