@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, url_for, redirect, flash, jso
 from flask_sqlalchemy import SQLAlchemy
 import sys, os, click
 from datetime import datetime
-import time
 from shell.Check import hostStatusCheck
 from shell.Check import Check
 
