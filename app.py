@@ -4,7 +4,7 @@ import sys, os, click
 from datetime import datetime
 from shell.Check import hostStatusCheck
 from shell.Check import Check
-
+from shell import applog
 
 
 WIN = sys.platform.startswith('win')
@@ -141,6 +141,8 @@ def delete_record(record_id):
 
 @app.route('/check', methods=['GET', 'POST'])
 def check():
+    file = applog.Applog()
+    file.addLog("##################start check#######################")
     check_ids = request.get_json()
     hostinfos = []
     for check_id in check_ids:
@@ -161,6 +163,8 @@ def check():
             result = Check(hostinfos)
             record(result)
             data['data'] = "巡检结果：" + "巡检完成"
+    file.addLog("##################end check#######################")
+    file.closeLofile()
     return json.dumps(data)
 
 @app.route("/checklist", methods=['GET'])
@@ -177,7 +181,6 @@ def download_file(record_id):
     filename = record.check_doc
     del record
     return send_from_directory(directory, filename, as_attachment=True)
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True, port=5001)
