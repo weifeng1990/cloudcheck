@@ -152,7 +152,6 @@ def check():
         hostinfos.append(hostinfo)
     data = {}
     if not hostinfos:
-        logfile.addLog("not find any device")
         data['data'] = "未添加设备"
     else:
         text = hostStatusCheck(hostinfos)
