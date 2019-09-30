@@ -1,11 +1,9 @@
 from docx.shared import Mm
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from shell.collectData import casCollect
 from docx.shared import RGBColor, Inches
 from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
-from multiprocessing import Pool
 
 ##
 #cloudos2.0 api端口为9000
@@ -278,51 +276,15 @@ def systemHaDocument(document, list1, list2):
             t1.cell(i + 1, 3).paragraphs[0].add_run(list2[i])
     return
 
-
-def casCheck(ip, httpUsername, httpPassword, sshUser, sshPassword, logfile):
-    cas = casCollect(ip, httpUsername, httpPassword, sshUser, sshPassword)
-    logfile.addLog("cas basic check")
-    cas.cvmBasicCollect()
-    logfile.addLog("cas cluster check")
-    cas.clusterCollect()
-    logfile.addLog("cvk Basic check")
-    cas.cvkBasicCollect()
-    logfile.addLog("cvk disk check")
-    cas.cvkDiskCollect()
-    logfile.addLog("cvk vswitch check")
-    cas.cvkVswitchCollect()
-    logfile.addLog("cvk storpool check")
-    cas.cvkStorpoolCollect()
-    logfile.addLog("cvk sharepool check")
-    cas.cvkSharepoolCollect()
-    logfile.addLog("cvk network check")
-    cas.cvkNetsworkCollect()
-    logfile.addLog("vm basic check")
-    cas.vmBasicCollect()
-    logfile.addLog("vm disk check")
-    cas.vmDiskCollect()
-    logfile.addLog("vm network check")
-    cas.vmNetworkCollect()
-    logfile.addLog("vm diskrate check")
-    cas.vmDiskRateCollect()
-    logfile.addLog("cvm backup policy check")
-    cas.cvmBackupEnbleCollect()
-    logfile.addLog("cvm ha policy check")
-    cas.cvmHACollect()
-    logfile.addLog("vm backup policy check")
-    cas.vmBackupPolicyCollect()
-    return cas
-
-
 # cvm平台信息巡检
-def cvmCheck(document, cas):
+def cvmCheck(document, casInfo):
     list1 = []
-    list1.append(cas.casInfo['productVersion'])
-    list1.append(cas.casInfo['deviceDmide'])
-    list1.append(cas.casInfo['casVersion'])
-    list1.append(cas.casInfo['installType'])
-    list1.append(cas.casInfo['ovsVersion'])
-    list1.append(cas.casInfo['licenseInfo'])
+    list1.append(casInfo['productVersion'])
+    list1.append(casInfo['deviceDmide'])
+    list1.append(casInfo['casVersion'])
+    list1.append(casInfo['installType'])
+    list1.append(casInfo['ovsVersion'])
+    list1.append(casInfo['licenseInfo'])
     casBasicDocument(document, list1)
     del list1
     return
@@ -331,14 +293,14 @@ def cvmCheck(document, cas):
 ###################
 # 集群巡检        #
 ##################
-def clusterCheck(document, cas):
+def clusterCheck(document, casInfo):
     list1 = []
     list2 = ['' for n in range(7)]
 
     # 集群是否开启HA和DRS
     tempHa = ''
     tempLB = ''
-    for i in cas.casInfo['clusterInfo']:
+    for i in casInfo['clusterInfo']:
         if i['enableHA'] == '0':
             list2[0] += "集群" + i['name'] + " HA未开启\n"
         if i['enableLB'] == '0':
@@ -346,20 +308,20 @@ def clusterCheck(document, cas):
 
     # 集群下主机虚拟交换机部署是否合规
     dict1 = dict()
-    for i in cas.casInfo['clusterInfo']:
+    for i in casInfo['clusterInfo']:
         dict1[i['name']] = list()
         for j in i['cvkInfo']:
             for k in j['vswitch']:
                 if not k['name'] in dict1[i['name']]:
                     dict1[i['name']].append(k['name'])
-    for i in cas.casInfo['clusterInfo']:
+    for i in casInfo['clusterInfo']:
         if len(dict1[i['name']]) != 3:
             list2[2] += "集群" + i['name'] + "下交换机的部署不合规\n"
 
     # cvk共享存储池部署是否一致
     dict1 = {}  # 存储集群下的所有共享存储池
     dict2 = {}  # 存储主机下的共享存储池
-    for i in cas.casInfo['clusterInfo']:
+    for i in casInfo['clusterInfo']:
         dict1[i['name']] = set()
         for j in i['cvkInfo']:
             dict2[j['name']] = set()
@@ -373,7 +335,7 @@ def clusterCheck(document, cas):
     del dict1, dict2
 
     # 共享存储利用率：
-    for i in cas.casInfo['clusterInfo']:
+    for i in casInfo['clusterInfo']:
         li1 = list()
         for j in i['cvkInfo']:
             for k in j['sharePool']:
@@ -385,7 +347,7 @@ def clusterCheck(document, cas):
         del li1
 
     # 集群最小主机节点
-    for i in cas.casInfo['clusterInfo']:
+    for i in casInfo['clusterInfo']:
         if i['enableHA'] == '0':
             list2[5] = "集群未开启高可靠"
         else:
@@ -407,10 +369,10 @@ def clusterCheck(document, cas):
 # 主机巡检                            #
 #                                     #
 ########################################
-def cvkCheck(document, cas):
+def cvkCheck(document, casInfo):
     list1 = []
     list2 = ['' for n in range(7)]
-    for i in cas.casInfo['clusterInfo']:
+    for i in casInfo['clusterInfo']:
         dict1 = {}
         for j in i['cvkInfo']:
             dict1[j['name']] = ''
@@ -485,10 +447,10 @@ def cvkCheck(document, cas):
 #                                      #
 ########################################
 
-def vmCheck(document, cas):
+def vmCheck(document, casInfo):
     list1 = []
     list2 = ['' for n in range(7)]
-    for i in cas.casInfo['clusterInfo']:
+    for i in casInfo['clusterInfo']:
         for j in i['cvkInfo']:
             dict1 = {}
             dict2 = {}
@@ -588,25 +550,25 @@ def vmCheck(document, cas):
 ####################
 # cvm可靠性巡检
 ####################
-def cvmHaCheck(document, cas):
+def cvmHaCheck(document, casInfo):
     list1 = []
     list2 = ['' for n in range(4)]
 
     # 虚拟交换机的是否配置冗余链路
 
     # cvm是否开启备份策略
-    if not cas.casInfo['BackupEnable']:
+    if not casInfo['BackupEnable']:
         list2[1] = 'cvm未开启备份策略'
 
     # cvm是否开启HA高可靠
-    if not cas.casInfo['HA']:
+    if not casInfo['HA']:
         list2[2] = '未开启HA高可靠'
 
     # 检查虚拟机是否配置高可靠
-    if cas.casInfo['vmBackPolicy'] == 'NONE':
+    if casInfo['vmBackPolicy'] == 'NONE':
         list2[3] = '未配置虚拟机备份'
     else:
-        for i in cas.casInfo['vmBackPolicy']:
+        for i in casInfo['vmBackPolicy']:
             if i['state'] != '1':
                 if not list2[3]:
                     list2[3] = '状态异常备份策略如下：' + i['name']

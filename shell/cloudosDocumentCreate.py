@@ -1,7 +1,6 @@
 from docx.shared import Mm
 from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from shell.collectData import cloudosCollect
 from docx.shared import RGBColor, Inches
 from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
@@ -21,42 +20,6 @@ def createTable(document, row, col):
         i.height = Mm(10)
     return table
 
-#数据采集、巡检
-def cloudosCheck(ip, sshuser, sshpassword, httpuser, httppassword, logfile):
-    os = cloudosCollect(ip, sshuser, sshpassword, httpuser, httppassword)
-    logfile.addLog("cloudos Node find ")
-    os.NodeCollect()
-    logfile.addLog("find masker node")
-    os.findMaster()
-    logfile.addLog("host disk rate check")
-    os.diskRateCollect()
-    logfile.addLog("host memory rate check")
-    os.memRateCollect()
-    logfile.addLog("host cpu rate check")
-    os.cpuRateCollect()
-    logfile.addLog("k8s container find")
-    os.ctainrStateCollect()
-    logfile.addLog("k8s images finnd")
-    os.dockerImageCollect()
-    logfile.addLog("share storage error check")
-    os.shareStorErrorCollect()
-    logfile.addLog("k8s container service check")
-    os.ctainrServiceCollect()
-    logfile.addLog("k8s cluster container loadbalance check")
-    os.ctainrLBCollect()
-    logfile.addLog("vm images check")
-    os.imageCollect()
-    logfile.addLog("vm status check")
-    os.vmCollect()
-    logfile.addLog("cloud disk check")
-    os.vdiskCollect()
-    logfile.addLog("cloudos basic check")
-    os.cloudosBasicCellect()
-    logfile.addLog("disk rate check")
-    os.diskCapacity()
-    logfile.addLog("node ntp time check")
-    os.nodeNtpTimeCollect()
-    return os
 #
 def osBasicDocument(document, list1):
     h1 = document.add_heading('Cloudos平台巡检结果')
@@ -128,26 +91,24 @@ def osPlatDocument(document, list1, list2):
             t1.cell(i + 1, 3).paragraphs[0].add_run(list2[i])
     return
 
-
-
-def osBasicCheck(document, os):
+def osBasicCheck(document, osInfo):
     list1 = ['' for n in range(5)]
-    list1[0] = os.osInfo['productVersion']
-    list1[1] = os.osInfo['deviceDmide']
-    if len(os.osInfo['nodeInfo']) > 1:
+    list1[0] = osInfo['productVersion']
+    list1[1] = osInfo['deviceDmide']
+    if len(osInfo['nodeInfo']) > 1:
         list1[2] = '集群'
     else:
         list1[2] = '单机'
-    list1[3] = (str)(len(os.osInfo['nodeInfo']))
-    list1[4] = os.osInfo['version']
+    list1[3] = (str)(len(osInfo['nodeInfo']))
+    list1[4] = osInfo['version']
     osBasicDocument(document, list1)
     return
 
 
-def osPlatCheck(document, os):
+def osPlatCheck(document, osInfo):
     list1 = list()
     list2 = ['' for n in range(12)]
-    for i in os.osInfo['nodeInfo']:
+    for i in osInfo['nodeInfo']:
         #检查分区是否合规
         temp = str()
         for j in  i['diskCapacity']:
@@ -204,19 +165,15 @@ def osPlatCheck(document, os):
                 list2[3] = "、" + i['hostName']
 
         #容器镜像完整性
-        imagesSet = {'cloudos-portal', 'cloudos-param', 'cloudos-openstack-compute', 'cloudos-openstack',
-                     'cloudos-web-app', 'cloudos-core-api', 'cloudos-db-install', 'cloudos-app-manager',
-                     'cloudos-postgres', 'nginx', 'cloudos-kube-dns', 'cloudos-rabbitmq', 'registry'}
-        if i['hostName'] == os.osInfo['masterIP']:
-            if i['images'] != imagesSet:
+        if i['hostName'] == osInfo['masterIP']:
+            if len(i['images']) != 0:
                 list2[4] += "\n主节点" + i['hostName'] + "缺少如下镜像："
-                for k in imagesSet - i['images']:
+                for k in i['images']:
                     list2[4] += "\t" + k
         else:
-            set1 = imagesSet - {'registry'}
-            if i['images'] != set1:
+            if len(i['images']) != 0:
                 list2[4] += "\n节点" + i['hostName'] + "缺少如下镜像："
-                for k in set1 - i['images']:
+                for k in i['images']:
                     list2[4] += "\t" + k
 
         #节点cpu利用率
@@ -234,7 +191,7 @@ def osPlatCheck(document, os):
                 list2[6] += "、" + i['hostName']
 
     #容器状态
-    for i in os.osInfo['ctainrState']:
+    for i in osInfo['ctainrState']:
         if i['status'] != 'Running':
             if not list2[7]:
                 list2[7] = '状态异常容器pod如下：' + i['name']
@@ -242,29 +199,24 @@ def osPlatCheck(document, os):
                 list2[7] += '、' + i['name']
 
     # k8s集群容器分布是否均匀
-    if not os.osInfo['ctainrLB']:
+    if not osInfo['ctainrLB']:
         list2[8] = "k8s集群容器分布不均匀"
 
     # 容器关键服务检查
-    str1 =str()
-    for i in os.osInfo['serviceStatus']['cloudos-openstack']:
-        if not i['status']:
-            if not str1:
-                str1 = "容器" + 'cloudos-openstack如下服务异常：' +  i['name']
-            else:
-                str1 += "、" + i['name']
-    str2 = str()
-    for i in os.osInfo['serviceStatus']['cloudos-openstack-compute']:
-        if not i['status']:
-            if not str1:
-                str2 = "容器" + 'cloudos-openstack-compute如下服务异常：' + i['name']
-            else:
-                str2 += "、" + i['name']
-    list2[9] = str1 + str2
-    del str1, str2
+    str1 = ''
+    for j in osInfo['serviceStatus'].keys():
+        str2 = ''
+        for i in osInfo['serviceStatus'][j]:
+            if not i['status']:
+                if not str2:
+                    str2 = "容器" + j +'如下服务异常：' + i['name']
+                else:
+                    str2 += "、" + i['name']
+        str1 += str2
+    list2[9] = str1
 
     # 云主机
-    for i in os.osInfo['vmStatus']:
+    for i in osInfo['vmStatus']:
         if i['status'] != "ACTIVE":
             if not list2[10]:
                 list2[10] = '状态异常云主机如下：' + i['name']
@@ -272,7 +224,7 @@ def osPlatCheck(document, os):
                 list2[10] += '、' + i['name']
 
     # 云硬盘
-    for i in os.osInfo['vDiskStatus']:
+    for i in osInfo['vDiskStatus']:
         if i['status'] != 'available':
             if not list2[11]:
                 list2[11] = '状态异常云硬盘如下：' + i['name']

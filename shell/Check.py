@@ -1,8 +1,11 @@
 from shell import casDocumentCreate
 from shell import cloudosDocumentCreate
+from shell.CollectData import casCollect
+from shell.CollectData import cloudosCollect
 from docx import Document
 from tcpping import tcpping
-import time, os
+import time
+import os
 
 def hostStatusCheck(hostInfo):
     error = str()
@@ -26,33 +29,23 @@ def hostStatusCheck(hostInfo):
     return error
 
 
-def Check(hostInfo, logfile):
+def Check(hostInfo):
     status = hostStatusCheck(hostInfo)
     document = Document()
     result = {"filename" : '', "content" : ''}
     for i in hostInfo:
         if i['role'] == 'cvm':
-            logfile.addLog("####cas collectdata begin####")
-            cas = casDocumentCreate.casCheck(i['ip'], i['httpUser'], i['httpPassword'], i['sshUser'], i['sshPassword'],logfile)
-            logfile.addLog("cvm check document create")
-            casDocumentCreate.cvmCheck(document, cas)
-            logfile.addLog("cas cluster document creat")
-            casDocumentCreate.clusterCheck(document, cas)
-            logfile.addLog("cas cvk cluster document create")
-            casDocumentCreate.cvkCheck(document, cas)
-            logfile.addLog("cas vm check document create")
-            casDocumentCreate.vmCheck(document, cas)
-            logfile.addLog("cas cvm ha lb document crate")
-            casDocumentCreate.cvmHaCheck(document, cas)
-            del cas
+            casInfo = casCollect(i['ip'], i['sshUser'], i['sshPassword'], i['httpUser'], i['httpPassword'])
+            casDocumentCreate.cvmCheck(document, casInfo)
+            casDocumentCreate.clusterCheck(document, casInfo)
+            casDocumentCreate.cvkCheck(document, casInfo)
+            casDocumentCreate.vmCheck(document, casInfo)
+            casDocumentCreate.cvmHaCheck(document, casInfo)
 
         elif i['role'] == 'cloudos':
-            logfile.addLog("####cloudos check#####")
-            cloud = cloudosDocumentCreate.cloudosCheck(i['ip'], i['sshUser'], i['sshPassword'], i['httpUser'], i['httpPassword'], logfile)
-            logfile.addLog("cloudos basic info document create")
-            cloudosDocumentCreate.osBasicCheck(document, cloud)
-            logfile.addLog("cloudos plat document create")
-            cloudosDocumentCreate.osPlatCheck(document, cloud)
+            osInfo = cloudosCollect(i['ip'], i['sshUser'], i['sshPassword'], i['httpUser'], i['httpPassword'])
+            cloudosDocumentCreate.osBasicCheck(document, osInfo)
+            cloudosDocumentCreate.osPlatCheck(document, osInfo)
         result['content'] += i['role'] + '\t'
 
     filename = "巡检文档" + time.strftime("%Y%m%d%H%M", time.localtime())+".docx"
@@ -60,11 +53,3 @@ def Check(hostInfo, logfile):
     document.save(path)
     result['filename'] = filename
     return result
-
-
-
-# hostInfo = []
-# cvm = {"ip":"192.168.2.5",'role':'cvm','sshUser':'root','sshPassword':'h3c.com!','httpUser':'admin','httpPassword':'admin', 'sshPort':22, 'httpPort':8080}
-# hostInfo.append(cvm)
-# print(hostInfo)
-# Check(hostInfo)
