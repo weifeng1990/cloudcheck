@@ -36,6 +36,7 @@ class Cloudos3Data(Cloudos2Data):
                 url = "http://" + self.ip + ":8000/os/compute/v1/v2/" + i['uuid'] + "/servers/detail"
                 response1 = requests.get(url, auth=HTTPBasicAuth(self.httpuser, self.httppassword))
                 serv = json.loads(response1.text)
+                print(serv)
                 response1.close()
                 if 'servers' in serv.keys():
                     for j in serv['servers']:

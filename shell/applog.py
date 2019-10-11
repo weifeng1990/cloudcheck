@@ -1,11 +1,6 @@
 import os, time
 class Applog :
     def __init__(self):
-        # pathstr = os.getcwd().split('\\')
-        # path = ""
-        # for i in range(len(pathstr) - 1):
-        #     path += pathstr[i] + '\\'
-        # print(pathstr, path)
         logfile = os.getcwd() + "\\log\\" + time.strftime("%Y%m%d", time.localtime()) + ".log"
         self.fp = open(logfile, 'a')
         return

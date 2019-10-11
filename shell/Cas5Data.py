@@ -7,8 +7,8 @@ logfile = applog.Applog()
 
 class Cas5Data(Cas3Data):
 
-    def cvkVswitch(self, id):
-        response = requests.get(self.url + '/host/id/' + id + '/vswitch',
+    def cvkVswitch(self, cvk):
+        response = requests.get(self.url + '/host/id/' + cvk['id'] + '/vswitch',
                                 auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt1 = response.text
         response.close()
@@ -34,4 +34,5 @@ class Cas5Data(Cas3Data):
         del temp
         del dict1
         del dict2
+        cvk['vswitch'] = li
         return li

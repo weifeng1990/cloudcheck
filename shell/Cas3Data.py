@@ -4,6 +4,7 @@ import requests
 import paramiko
 from multiprocessing import Pool
 from shell import applog
+import threadpool
 
 logfile = applog.Applog()
 
@@ -145,22 +146,22 @@ class Cas3Data:
     @applog.logRun(logfile)
     def cvkSharepoolCollect(self):
         for i in self.casInfo['clusterInfo']:
-            pool = Pool(processes=4)
-            for k in i['cvkInfo']:
-                k['sharePool'] = list()
-                pool.apply_async(self.cvkSharepool, args=(k,))
-            pool.close()
-            pool.join()
+            pool = threadpool.ThreadPool(10)
+            threadlist = threadpool.makeRequests(self.cvkSharepool, i['cvkInfo'])
+            for k in threadlist:
+                pool.putRequest(k)
+            pool.wait()
         return
 
-    def cvkSharepool(self, k):
-        response = requests.get(self.url + 'host/id/' + k['id'] + '/storage',
+    def cvkSharepool(self, cvk):
+        response = requests.get(self.url + 'host/id/' + cvk['id'] + '/storage',
                                 auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt1 = response.text
         response.close()
         dict1 = xmltodict.parse(contxt1)
         list1 = []
         dict2 = {}
+        li = []
         if isinstance(dict1['list'], dict):
             if 'storagePool' in dict1['list']:
                 if isinstance(dict1['list']['storagePool'], dict):
@@ -171,9 +172,10 @@ class Cas3Data:
                     dict2['name'] = j['name']
                     dict2['rate'] = 1 - (float)(j['freeSize']) / (float)(j['totalSize'])
                     dict2['path'] = j['path']
-                    k['sharePool'].append(dict2.copy())
+                    li.append(dict2.copy())
         del list1
         del dict2
+        cvk['sharePool'] = li
         return
 
 
@@ -184,15 +186,15 @@ class Cas3Data:
     @applog.logRun(logfile)
     def cvkDiskCollect(self):
         for i in self.casInfo['clusterInfo']:
-            pool = Pool(processes=4)
-            for k in i['cvkInfo']:
-                k['diskRate'] = pool.apply_async(self.cvkDisk, args=(k['id'],)).get()
-            pool.close()
-            pool.join()
+            pool = threadpool.ThreadPool(10)
+            threadlist = threadpool.makeRequests(self.cvkDisk, i['cvkInfo'])
+            for k in threadlist:
+                pool.putRequest(k)
+            pool.wait()
         return
 
-    def cvkDisk(self, id):
-        response = requests.get(self.url + 'host/id/' + id + '/monitor',
+    def cvkDisk(self, cvk):
+        response = requests.get(self.url + 'host/id/' + cvk['id'] + '/monitor',
                                 auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt1 = response.text
         response.close()
@@ -212,7 +214,8 @@ class Cas3Data:
                 li.append(temp1.copy())
                 del temp1
             del temp
-        return li
+        cvk['diskRate'] = li
+        return
 
         ##############################################################
         # 获取CVK主机虚拟交换机信息
@@ -220,15 +223,15 @@ class Cas3Data:
     @applog.logRun(logfile)
     def cvkVswitchCollect(self):
         for i in self.casInfo['clusterInfo']:
-            pool = Pool(processes=4)
-            for k in i['cvkInfo']:
-                k['vswitch'] = pool.apply_async(self.cvkVswitch, args=(k['id'],)).get()
-            pool.close()
-            pool.join()
+            pool = threadpool.ThreadPool(10)
+            threadlist = threadpool.makeRequests(self.cvkVswitch, i['cvkInfo'])
+            for k in threadlist:
+                pool.putRequest(k)
+            pool.wait()
         return
 
-    def cvkVswitch(self, id):
-        response = requests.get(self.url + '/host/id/' + id + '/vswitch',
+    def cvkVswitch(self, cvk):
+        response = requests.get(self.url + '/host/id/' + cvk['id'] + '/vswitch',
                                 auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt1 = response.text
         response.close()
@@ -254,7 +257,8 @@ class Cas3Data:
         del temp
         del dict1
         del dict2
-        return li
+        cvk['vswitch'] = li
+        return
 
 
     ################################################################################
@@ -263,15 +267,15 @@ class Cas3Data:
     @applog.logRun(logfile)
     def cvkStorpoolCollect(self):
         for i in self.casInfo['clusterInfo']:
-            pool = Pool(processes=4)
-            for k in i['cvkInfo']:
-                k['storagePool'] = pool.apply_async(self.cvkStorpool, args=(k['id'],)).get()
-            pool.close()
-            pool.join()
+            pool = threadpool.ThreadPool(10)
+            threadlist = threadpool.makeRequests(self.cvkStorpool, i['cvkInfo'])
+            for k in threadlist:
+                pool.putRequest(k)
+            pool.wait()
         return
 
-    def cvkStorpool(self, id):
-        response = requests.get(self.url + 'storage/pool?hostId=' + id,
+    def cvkStorpool(self, cvk):
+        response = requests.get(self.url + 'storage/pool?hostId=' + cvk['id'],
                                 auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         contxt1 = response.text
         response.close()
@@ -289,6 +293,7 @@ class Cas3Data:
             li.append(temp1.copy())
             del temp1
         del temp
+        cvk['storagePool'] = li
         return li
 
 
@@ -296,16 +301,17 @@ class Cas3Data:
     @applog.logRun(logfile)
     def cvkNetsworkCollect(self):
         for i in self.casInfo['clusterInfo']:
-            pool = Pool(processes=4)
-            for k in i['cvkInfo']:
-                k['network'] = pool.apply_async(self.cvkNetwork, args=(k['ip'],)).get()
-            pool.close()
-            pool.join()
+            pool = threadpool.ThreadPool(10)
+            threadlist = threadpool.makeRequests(self.cvkNetwork, i['cvkInfo'])
+            for k in threadlist:
+                pool.putRequest(k)
+            pool.wait()
         return
 
-    def cvkNetwork(self, ip):
+    def cvkNetwork(self, cvk):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ip = cvk['ip']
         ssh.connect(ip, 22, self.sshUser, self.sshPassword)
         cmd = " ifconfig -a | grep eth | awk '{print $1}' | while read line;do ethtool $line | grep -e eth -e Duplex -e Speed -e Link;done"
         stdin, stdout, stderr = ssh.exec_command(cmd)
@@ -333,6 +339,7 @@ class Cas3Data:
             print("network check ssh error")
         del temp2
         ssh.close()
+        cvk['network'] = li
         return li
 
 
@@ -378,10 +385,10 @@ class Cas3Data:
 
     # diskrate thread function
     # 2019/8/29
-    def vmDiskRate(self, k):
+    def vmDiskRate(self, vm):
         li = []
-        if k['status'] == 'running':
-            response = requests.get(self.url + 'vm/id/' + k['id'] + '/monitor',
+        if vm['status'] == 'running':
+            response = requests.get(self.url + 'vm/id/' + vm['id'] + '/monitor',
                                     auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
             contxt1 = xmltodict.parse(response.text)
             response.close()
@@ -397,66 +404,63 @@ class Cas3Data:
                         dict1['usage'] = (float)(m['usage'])
                         li.append(dict1.copy())
             del list1
-        return li
+            vm['diskRate'] = li
+        return
 
-
-    # 虚拟机磁盘分区利用率
     @applog.logRun(logfile)
     def vmDiskRateCollect(self):
         for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
-                pool = Pool(processes=4)
-                for k in j['vmInfo']:
-                    k['diskRate'] = pool.apply_async(self.vmDiskRate, args=(k,)).get()
-                pool.close()
-                pool.join()
+                pool = threadpool.ThreadPool(10)
+                if j['vmInfo']:
+                    threadlist = threadpool.makeRequests(self.vmDiskRate, j['vmInfo'])
+                    for h in threadlist:
+                        pool.putRequest(h)
+                    pool.wait()
         return
 
     ################
     # 2019/8/29
     # weifeng
     ##################
-    def vmDisk(self, k):
+    def vmDisk(self, vm):
         li = []
-        if k['status'] == 'running':
-            response = requests.get(self.url + 'vm/detail/' + k['id'],
+        if vm['status'] == 'running':
+            response = requests.get(self.url + 'vm/detail/' + vm['id'],
                                     auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
             contxt1 = xmltodict.parse(response.text)
             response.close()
-            dict2 = {}
             dict1 = {}
             if 'domain' in contxt1.keys():
                 if 'storage' in contxt1['domain'].keys():
                     dict1 = contxt1['domain']['storage']
-                if 'network' in contxt1['domain'].keys():
-                    dict2 = contxt1['domain']['network']
-            temp1 = []
-            if isinstance(dict1, dict):
-                temp1.append(dict1)
-            else:
-                temp1 = dict1.copy()
-            for h in temp1:
-                temp2 = {}
-                if 'device' in h.keys() and h['device'] == 'disk':
-                    temp2['name'] = h['deviceName']
-                    if 'format' in h.keys():
-                        temp2['format'] = h['format']
+                    temp1 = []
+                    if isinstance(dict1, dict):
+                        temp1.append(dict1)
                     else:
-                        temp2['format'] = 'NULL'
-                    if 'cacheType' in h.keys():
-                        temp2['cacheType'] = h['cacheType']
-                    else:
-                        temp2['cacheType'] = 'NULL'
-                    if 'path' in h.keys():
-                        temp2['path'] = h['path']
-                    else:
-                        temp2['path'] = 'NULL'
-                        li.append(temp2.copy())
-                    del temp2
-            del temp1
-            del dict1
-            del dict2
-        return li
+                        temp1 = dict1.copy()
+                    for h in temp1:
+                        temp2 = {}
+                        if 'device' in h.keys() and h['device'] == 'disk':
+                            temp2['name'] = h['deviceName']
+                            if 'format' in h.keys():
+                                temp2['format'] = h['format']
+                            else:
+                                temp2['format'] = 'NULL'
+                            if 'cacheType' in h.keys():
+                                temp2['cacheType'] = h['cacheType']
+                            else:
+                                temp2['cacheType'] = 'NULL'
+                            if 'path' in h.keys():
+                                temp2['path'] = h['path']
+                            else:
+                                temp2['path'] = 'NULL'
+                            li.append(temp2.copy())
+                            del temp2
+                    del temp1
+                    del dict1
+                    vm['vmdisk'] = li
+        return
 
 
     # 虚拟机磁盘信息
@@ -464,18 +468,19 @@ class Cas3Data:
     def vmDiskCollect(self):
         for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
-                pool = Pool(processes=4)
-                for k in j['vmInfo']:
-                    k['vmdisk'] = pool.apply_async(self.vmDisk, args=(k,)).get()
-                pool.close()
-                pool.join()
+                if j['vmInfo']:
+                    pool = threadpool.ThreadPool(10)
+                    threadlist = threadpool.makeRequests(self.vmDisk, j['vmInfo'])
+                    for h in threadlist:
+                        pool.putRequest(h)
+                    pool.wait()
         return
 
 
-    def vmNetwork(self, k):
+    def vmNetwork(self, vm):
         li = []
-        if k['status'] == 'running':
-            response = requests.get(self.url + 'vm/detail/' + k['id'],
+        if vm['status'] == 'running':
+            response = requests.get(self.url + 'vm/detail/' + vm['id'],
                                     auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
             contxt1 = xmltodict.parse(response.text)
             response.close()
@@ -498,7 +503,8 @@ class Cas3Data:
                         del temp2
                     del temp1
             del dict1
-        return li
+            vm['vmNetwork'] = li
+        return
 
 
     # 虚拟机网卡巡检
@@ -506,11 +512,11 @@ class Cas3Data:
     def vmNetworkCollect(self):
         for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
-                pool = Pool(processes=4)
-                for k in j['vmInfo']:
-                    k['vmNetwork'] = pool.apply_async(self.vmNetwork, args=(k,)).get()
-                pool.close()
-                pool.join()
+                pool = threadpool.ThreadPool(10)
+                threadlist = threadpool.makeRequests(self.vmNetwork, j['vmInfo'])
+                for h in threadlist:
+                    pool.putRequest(h)
+                pool.wait()
         return
 
 

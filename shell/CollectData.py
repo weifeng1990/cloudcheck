@@ -5,6 +5,7 @@ from shell.applog import Applog
 from shell import applog
 from shell.Cloudos2Data import Cloudos2Data
 from shell.Cloudos3Data import Cloudos3Data
+import threadpool
 logfile = applog.Applog()
 
 @applog.logRun(logfile)
@@ -48,12 +49,16 @@ def casCollect(ip, sshUser, sshPassword, httpUser, httpPassword):
     cas.cvkNetsworkCollect()
     cas.vmBasicCollect()
     cas.vmDiskCollect()
-    cas.vmNetworkCollect()
     cas.vmDiskRateCollect()
+    cas.vmNetworkCollect()
     cas.cvmBackupEnbleCollect()
     cas.cvmHACollect()
     cas.vmBackupPolicyCollect()
     return cas.casInfo
+
+def cloudosfunc(fun):
+    fun()
+    return
 
 @applog.logRun(logfile)
 def cloudosCollect(ip, sshUser, sshPassword, httpUser, httpPassword):
@@ -66,30 +71,35 @@ def cloudosCollect(ip, sshUser, sshPassword, httpUser, httpPassword):
     cloud = func[version](ip, sshUser, sshPassword, httpUser, httpPassword)
     cloud.NodeCollect()
     cloud.findMaster()
-    cloud.diskRateCollect()
-    cloud.memRateCollect()
-    cloud.cpuRateCollect()
-    cloud.containerStateCollect()
-    cloud.dockerImageCheck()
-    cloud.shareStorErrorCollect()
-    cloud.containerServiceCollect()
-    cloud.containerLBCollect()
-    cloud.imageCollect()
-    cloud.vmCollect()
-    cloud.vdiskCollect()
-    cloud.cloudosBasicCellect()
-    cloud.diskCapacity()
-    cloud.nodeNtpTimeCollect()
+    ##########多线程方法############################
+    funlist = [cloud.diskRateCollect, cloud.memRateCollect, cloud.cpuRateCollect, cloud.containerStateCollect,
+               cloud.dockerImageCheck, cloud.shareStorErrorCollect, cloud.containerServiceCollect, cloud.containerLBCollect,
+               cloud.imageCollect, cloud.vmCollect, cloud.vdiskCollect, cloud.cloudosBasicCellect,
+               cloud.diskCapacity, cloud.nodeNtpTimeCollect]
+    pool = threadpool.ThreadPool(4)
+    taskList = threadpool.makeRequests(cloudosfunc, funlist)
+    for i in taskList:
+        pool.putRequest(i)
+    pool.wait()
     return cloud.osInfo
+    ############多线程方法如下#####################
 
-# if __name__ == '__main__':
-#     # casinfo = casCollect('192.168.2.5', 'root', 'h3c.com!', 'admin', 'admin')
-#     # print(casinfo)
-#     casinfo2 = casCollect('192.168.2.134', 'root', 'h3c.com!', 'admin', 'admin')
-#     print(casinfo2)
-#     # os1 = cloudosCollect('192.168.2.189', 'root', 'cloudos', 'admin', 'cloudos')
-#     # print(os1)
-#     os2 = cloudosCollect('192.168.2.132', 'root', 'cloudos', 'admin', 'h3c.com!')
-#     print(os2)
+    ###单线程方法如下#######
+    # cloud.diskRateCollect()
+    # cloud.memRateCollect()
+    # cloud.cpuRateCollect()
+    # cloud.containerStateCollect()
+    # cloud.dockerImageCheck()
+    # cloud.shareStorErrorCollect()
+    # cloud.containerServiceCollect()
+    # cloud.containerLBCollect()
+    # cloud.imageCollect()
+    # cloud.vmCollect()
+    # cloud.vdiskCollect()
+    # cloud.cloudosBasicCellect()
+    # cloud.diskCapacity()
+    # cloud.nodeNtpTimeCollect()
+    #return cloud.osInfo
+
 
 
