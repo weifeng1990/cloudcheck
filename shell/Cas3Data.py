@@ -8,6 +8,8 @@ import threadpool
 
 logfile = applog.Applog()
 
+THREADNUM = 16
+
 class Cas3Data:
 # 读取ip、username，password
     def __init__(self, ip, sshUser, sshPassword, httpUser, httpPassword):
@@ -145,8 +147,8 @@ class Cas3Data:
     ##################################################
     @applog.logRun(logfile)
     def cvkSharepoolCollect(self):
+        pool = threadpool.ThreadPool(THREADNUM)
         for i in self.casInfo['clusterInfo']:
-            pool = threadpool.ThreadPool(10)
             threadlist = threadpool.makeRequests(self.cvkSharepool, i['cvkInfo'])
             for k in threadlist:
                 pool.putRequest(k)
@@ -185,8 +187,8 @@ class Cas3Data:
     ##############################################################
     @applog.logRun(logfile)
     def cvkDiskCollect(self):
+        pool = threadpool.ThreadPool(THREADNUM)
         for i in self.casInfo['clusterInfo']:
-            pool = threadpool.ThreadPool(10)
             threadlist = threadpool.makeRequests(self.cvkDisk, i['cvkInfo'])
             for k in threadlist:
                 pool.putRequest(k)
@@ -222,8 +224,8 @@ class Cas3Data:
         ##############################################################
     @applog.logRun(logfile)
     def cvkVswitchCollect(self):
+        pool = threadpool.ThreadPool(THREADNUM)
         for i in self.casInfo['clusterInfo']:
-            pool = threadpool.ThreadPool(10)
             threadlist = threadpool.makeRequests(self.cvkVswitch, i['cvkInfo'])
             for k in threadlist:
                 pool.putRequest(k)
@@ -266,8 +268,8 @@ class Cas3Data:
     ################################################################################
     @applog.logRun(logfile)
     def cvkStorpoolCollect(self):
+        pool = threadpool.ThreadPool(THREADNUM)
         for i in self.casInfo['clusterInfo']:
-            pool = threadpool.ThreadPool(10)
             threadlist = threadpool.makeRequests(self.cvkStorpool, i['cvkInfo'])
             for k in threadlist:
                 pool.putRequest(k)
@@ -300,8 +302,8 @@ class Cas3Data:
     # 获取cvk主机的网卡信息
     @applog.logRun(logfile)
     def cvkNetsworkCollect(self):
+        pool = threadpool.ThreadPool(THREADNUM)
         for i in self.casInfo['clusterInfo']:
-            pool = threadpool.ThreadPool(10)
             threadlist = threadpool.makeRequests(self.cvkNetwork, i['cvkInfo'])
             for k in threadlist:
                 pool.putRequest(k)
@@ -312,8 +314,8 @@ class Cas3Data:
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ip = cvk['ip']
-        ssh.connect(ip, 22, self.sshUser, self.sshPassword)
-        cmd = " ifconfig -a | grep eth | awk '{print $1}' | while read line;do ethtool $line | grep -e eth -e Duplex -e Speed -e Link;done"
+        ssh.connect(self.host, 22, self.sshUser, self.sshPassword)
+        cmd = "ssh\t" + ip + "\tifconfig -a | grep eth | awk '{print $1}' | while read line;do ethtool $line | grep -e eth -e Duplex -e Speed -e Link;done"
         stdin, stdout, stderr = ssh.exec_command(cmd)
         temp2 = {}
         li = []
@@ -340,7 +342,7 @@ class Cas3Data:
         del temp2
         ssh.close()
         cvk['network'] = li
-        return li
+        return
 
 
     # 获取虚拟机的id,name,虚拟机状态，castool状态，cpu利用率，内存利用率
@@ -409,9 +411,9 @@ class Cas3Data:
 
     @applog.logRun(logfile)
     def vmDiskRateCollect(self):
+        pool = threadpool.ThreadPool(THREADNUM)
         for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
-                pool = threadpool.ThreadPool(10)
                 if j['vmInfo']:
                     threadlist = threadpool.makeRequests(self.vmDiskRate, j['vmInfo'])
                     for h in threadlist:
@@ -466,10 +468,10 @@ class Cas3Data:
     # 虚拟机磁盘信息
     @applog.logRun(logfile)
     def vmDiskCollect(self):
+        pool = threadpool.ThreadPool(THREADNUM)
         for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
                 if j['vmInfo']:
-                    pool = threadpool.ThreadPool(10)
                     threadlist = threadpool.makeRequests(self.vmDisk, j['vmInfo'])
                     for h in threadlist:
                         pool.putRequest(h)
@@ -510,9 +512,9 @@ class Cas3Data:
     # 虚拟机网卡巡检
     @applog.logRun(logfile)
     def vmNetworkCollect(self):
+        pool = threadpool.ThreadPool(THREADNUM)
         for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
-                pool = threadpool.ThreadPool(10)
                 threadlist = threadpool.makeRequests(self.vmNetwork, j['vmInfo'])
                 for h in threadlist:
                     pool.putRequest(h)
