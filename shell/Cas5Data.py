@@ -8,14 +8,14 @@ logfile = applog.Applog()
 class Cas5Data(Cas3Data):
 
     def cvkVswitch(self, cvk):
-        response = requests.get(self.url + '/host/id/' + cvk['id'] + '/vswitch',
-                                auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
+        response = requests.get(self.url + 'host/id/' + cvk['id'] + '/vswitch', cookies=self.cookies)
         contxt1 = response.text
         response.close()
         dict2 = xmltodict.parse(contxt1)
+        # print(dict2)
         li = []
-        if 'host' in dict2.keys():  # 5.0为host
-            dict1 = dict2['host']
+        if 'list' in dict2.keys():  # 5.0为host
+            dict1 = dict2['list']
         else:
             return li
         temp = []
@@ -35,4 +35,4 @@ class Cas5Data(Cas3Data):
         del dict1
         del dict2
         cvk['vswitch'] = li
-        return li
+        return
