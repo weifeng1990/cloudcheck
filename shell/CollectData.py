@@ -73,7 +73,7 @@ def cloudosCollect(ip, sshUser, sshPassword, httpUser, httpPassword):
     ##########多线程方法############################
     funlist = [cloud.diskRateCollect, cloud.memRateCollect, cloud.cpuRateCollect, cloud.containerStateCollect,
                cloud.dockerImageCheck, cloud.shareStorErrorCollect, cloud.containerServiceCollect, cloud.containerLBCollect,
-               cloud.imageCollect, cloud.vmCollect, cloud.vdiskCollect, cloud.cloudosBasicCellect,
+               cloud.imageCollect, cloud.vmCollect, cloud.vdiskCollect, cloud.cloudosBasicCollect,
                cloud.diskCapacity, cloud.nodeNtpTimeCollect]
     pool = threadpool.ThreadPool(4)
     taskList = threadpool.makeRequests(cloudosfunc, funlist)
