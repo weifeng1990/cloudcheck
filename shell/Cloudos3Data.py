@@ -31,10 +31,12 @@ class Cloudos3Data(Cloudos2Data):
         self.osInfo['vmStatus'] = []
         response = requests.get("http://" + self.ip + ":8000/sys/identity/v2/projects",
                                 auth=HTTPBasicAuth(self.httpuser, self.httppassword))
+        cookies = response.cookies
         for i in json.loads(response.text)['projects']:
             if i['type'] == "SYSTEM":
                 url = "http://" + self.ip + ":8000/os/compute/v1/v2/" + i['uuid'] + "/servers/detail"
-                response1 = requests.get(url, auth=HTTPBasicAuth(self.httpuser, self.httppassword))
+                # response1 = requests.get(url, auth=HTTPBasicAuth(self.httpuser, self.httppassword))
+                response1 = requests.get(url, cookies = cookies)
                 serv = json.loads(response1.text)
                 print(serv)
                 response1.close()
@@ -53,10 +55,12 @@ class Cloudos3Data(Cloudos2Data):
         response = requests.get("http://" + self.ip + ":8000/sys/identity/v2/projects",
                                 auth=HTTPBasicAuth(self.httpuser, self.httppassword))
         self.osInfo['vDiskStatus'] = []
+        cookies = response.cookies
         for i in json.loads(response.text)['projects']:
             if i['type'] == "SYSTEM":
                 url = "http://" + self.ip + ":8000/os/storage/v1/v2/" + i['uuid'] + "/volumes/detail"
-                response1 = requests.get(url, auth=HTTPBasicAuth(self.httpuser, self.httppassword))
+                # response1 = requests.get(url, auth=HTTPBasicAuth(self.httpuser, self.httppassword))
+                response1 = requests.get(url, cookies=cookies)
                 for j in json.loads(response1.text)['volumes']:
                     dict1 = {}
                     dict1['name'] = j['name']

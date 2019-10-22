@@ -18,13 +18,14 @@
         <td class="btbg font-center">http账号</td>
         <!--td class="btbg font-center">http密码</td-->
         <td class="btbg font-center">http端口</td>
+        <td class="btbg font-center">巡检自定义</td>
         <td class="btbg font-center">操作</td>
     </tr>
     {% for host in hosts %}
     <tr>
         <td>
             <form>
-                <input type="checkbox" name="if_check" value="{{ host.id }}" onselect="setBtnOk()">
+                <input type="checkbox" name="if_check" value="{{ host.id }}">
             </form>
         </td>
         <td class="font-center">{{ host.id }}</td>
@@ -36,9 +37,22 @@
         <td class="font-center">{{ host.http_user }}</td>
         <!--td class="font-center">{{ host.http_passwd }}</td-->
         <td class="font-center">{{ host.http_port }}</td>
+        {% if host.role == 'cvm' %}
+        <td class="font-center">
+            <form>
+                <input type="checkbox" name="cas_define_check" value="{{ host.id }}">虚拟机
+            </form>
+        </td>
+        {% else %}
+        <td class="font-center">
+            <form>
+                <input type="checkbox" name="cas_define_check" value="{{ host.id }}" hidden>
+            </form>
+        </td>
+        {% endif %}
         <td class="font-center">
             <form class="inline-form" method="get" action="{{ url_for('edit', host_id=host.id) }}">
-                <input class="btn" type="submit" name="delete" value="修改">
+                <input class="btn" type="submit" name="change" value="修改">
             </form>
             <form class="inline-form" method="post" action="{{ url_for('delete', host_id=host.id) }}">
                 <input class="btn" type="submit" name="delete" value="删除" onclick="return confirm('是否确定删除？')">
@@ -88,12 +102,31 @@
         started0.innerHTML = '-----巡检日志-----';
         started1.innerHTML = '开始巡检，请耐心等待，不要关闭页面！'
         var if_checks = document.getElementsByName("if_check");
-        var test = document.getElementById("test")
+        var cas_define_checks = document.getElementsByName("cas_define_check")
         var check_ids = new Array()
         for (var i=0; i<if_checks.length; i++){
             if (if_checks[i].checked == true){
                 var id = if_checks[i].value
-                check_ids.push(id)
+                var check_id = {
+                    host_id:id
+                }
+                for (var m=0; m<cas_define_checks.length; m++){
+                    if (cas_define_checks[m].value == id){
+                        if (cas_define_checks[m].checked == true){
+                            var cdvi = {
+                                cas_define_check_id:1
+                            }
+                            Object.assign(check_id,cdvi)
+                        }
+                        else {
+                            var cdvi = {
+                                cas_define_check_id:0
+                            }
+                            Object.assign(check_id,cdvi)
+                        }
+                    }
+                }
+                check_ids.push(check_id)
             }
         }
 

@@ -50,7 +50,7 @@ class Cloudos2Data:
 
     #获取cloudos服务器硬件信息和软件版本
     @applog.logRun(logfile)
-    def cloudosBasicCellect(self):
+    def cloudosBasicCollect(self):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
@@ -297,9 +297,10 @@ class Cloudos2Data:
                         if set1 == images.imagesv2Set - {'registry'}:
                             i["images"] = set()
                         else:
-                            i["images"] = images.imagesv2Set.difference(set1)
+                            i["images"] = (images.imagesv2Set - {'registry'}).difference(set1)
                 else:
                     print("docker Image check ssh is invalid")
+            del set1
         ssh.close()
         return
 
@@ -351,10 +352,10 @@ class Cloudos2Data:
                     dict1 = {}
                     dict1['name'] = i
                     cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 exec " \
-                          "-it\t" + j.split()[0] + "\tsystemctl status\t" + i + "| grep Active | awk '{print $3}'"
+                          "-it\t" + j.split()[0] + "\tsystemctl status\t" + i + "| grep Active | awk '{print $2}'"
                     stdin, stdout, stderr = ssh.exec_command(cmd)
-                    status = re.findall(r'\((.*?)\)', stdout.read().decode())[0]
-                    if status == 'running':
+                    status = stdout.read().decode()
+                    if status == 'active':
                         dict1['status'] = True
                     else:
                         dict1['status'] = False
@@ -368,10 +369,10 @@ class Cloudos2Data:
                     dict1 = {}
                     dict1['name'] = i
                     cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 exec -it\t" + j.split()[
-                        0] + "\tsystemctl status\t" + i + "| grep Active | awk '{print $3}'"
+                        0] + "\tsystemctl status\t" + i + "| grep Active | awk '{print $2}'"
                     stdin, stdout, stderr = ssh.exec_command(cmd)
-                    status = re.findall(r'\((.*?)\)', stdout.read().decode())[0]
-                    if status == "running":
+                    status = stdout.read().decode()
+                    if status == "active":
                         dict1['status'] = True
                     else:
                         dict1['status'] = False
