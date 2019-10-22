@@ -142,15 +142,14 @@ class Cloudos3Data(Cloudos2Data):
             for j in servicedict[i]:
                 dic1 = {}
                 dic1['name'] = j
-                cmd ="/opt/bin/kubectl -s 127.0.0.1:8888 exec -it " + pod +" systemctl status " + j + " | grep Active | awk '{print $3}'"
+                cmd ="/opt/bin/kubectl -s 127.0.0.1:8888 exec -it " + pod +" systemctl status " + j + " | grep Active | awk '{print $2}'"
                 stdin, stdout, stderr = ssh.exec_command(cmd)
                 sshout = stdout.read().decode().strip()
                 if sshout != '':
-                    status = re.findall(r'\((.*?)\)', sshout)[0]
-                    # status = re.findall(r'\((.*?)\)', stdout.read().decode().strip())[0]
+                    status = sshout
                 else:
-                    status = "running"
-                if status == "running":
+                    status = "active"
+                if status == "\x1b[1;32mactive":
                     dic1['status'] = True
                 else:
                     dic1['status'] = False
@@ -176,15 +175,11 @@ class Cloudos3Data(Cloudos2Data):
                         set1.add(j)
                     # 当为v2版本使用v2的镜像集合进行对比
                     if i['hostName'] == self.osInfo['masterIP']:
-                        if set1 == images.imagesv3Set:
-                            i["images"] = set()
-                        else:
+                        if set1 != images.imagesv3Set:
                             i["images"] = images.imagesv3Set.difference(set1)
                     else:
-                        if set1 == images.imagesv3Set - {'registry'}:
-                            i["images"] = set()
-                        else:
-                            i["images"] = images.imagesv3Set.difference(set1)
+                        if set1 != images.imagesv3Set - {'registry'}:
+                            i["images"] = (images.imagesv3Set - {'registry'}).difference(set1)
                 else:
                     print("docker Image check ssh is invalid")
         ssh.close()

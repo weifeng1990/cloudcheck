@@ -50,7 +50,7 @@ class Cloudos2Data:
 
     #获取cloudos服务器硬件信息和软件版本
     @applog.logRun(logfile)
-    def cloudosBasicCollect(self):
+    def cloudosBasicCellect(self):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
@@ -300,7 +300,6 @@ class Cloudos2Data:
                             i["images"] = (images.imagesv2Set - {'registry'}).difference(set1)
                 else:
                     print("docker Image check ssh is invalid")
-            del set1
         ssh.close()
         return
 
@@ -355,7 +354,7 @@ class Cloudos2Data:
                           "-it\t" + j.split()[0] + "\tsystemctl status\t" + i + "| grep Active | awk '{print $2}'"
                     stdin, stdout, stderr = ssh.exec_command(cmd)
                     status = stdout.read().decode()
-                    if status == 'active':
+                    if status == '\x1b[1;32mactive':
                         dict1['status'] = True
                     else:
                         dict1['status'] = False
@@ -372,7 +371,7 @@ class Cloudos2Data:
                         0] + "\tsystemctl status\t" + i + "| grep Active | awk '{print $2}'"
                     stdin, stdout, stderr = ssh.exec_command(cmd)
                     status = stdout.read().decode()
-                    if status == "active":
+                    if status == "\x1b[1;32mactive":
                         dict1['status'] = True
                     else:
                         dict1['status'] = False

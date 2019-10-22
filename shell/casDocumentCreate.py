@@ -469,7 +469,7 @@ def vmCheck(document, casInfo):
             for k in j['vmInfo']:
                 # print(k)
                 # 虚拟机状态
-                if k['status'] != 'running':
+                if k['status'] != 'running' and k['status'] != 'shutOff':
                     if not list2[0]:
                         list2[0] = "状态异常虚拟机如下：" + k['name']
                     else:
@@ -595,18 +595,3 @@ def cvmHaCheck(document, casInfo):
     systemHaDocument(document, list1, list2)
     return
 
-
-
-# if __name__ == '__main__':
-#     cas = casCheck('192.168.2.5', 'admin', 'admin', 'root', 'h3c.com!')
-#     print(cas.casInfo)
-#     for i in cas.casInfo['clusterInfo']:
-#         for j in i['cvkInfo']:
-#             print(j)
-    # document = openDocument()
-    # cvmCheck(document, cas)
-    # clusterCheck(document, cas)
-    # cvkCheck(document, cas)
-    # vmCheck(document, cas)
-    # cvmHaChech(document, cas)
-    # document.save('test1.docx')

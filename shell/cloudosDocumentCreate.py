@@ -209,7 +209,7 @@ def osPlatCheck(document, osInfo):
         for i in osInfo['serviceStatus'][j]:
             if not i['status']:
                 if not str2:
-                    str2 = "容器" + j +'如下服务异常：' + i['name']
+                    str2 = "\n容器" + j +'如下服务异常：' + i['name']
                 else:
                     str2 += "、" + i['name']
         str1 += str2
@@ -217,7 +217,7 @@ def osPlatCheck(document, osInfo):
 
     # 云主机
     for i in osInfo['vmStatus']:
-        if i['status'] != "ACTIVE":
+        if i['status'] != "ACTIVE" and i['status'] != "SHUTOFF":
             if not list2[10]:
                 list2[10] = '状态异常云主机如下：' + i['name']
             else:
@@ -225,7 +225,8 @@ def osPlatCheck(document, osInfo):
 
     # 云硬盘
     for i in osInfo['vDiskStatus']:
-        if i['status'] != 'available':
+        if i['status'] != 'available' and i['status'] != 'in-use':
+            print(i['name'], i['status'])
             if not list2[11]:
                 list2[11] = '状态异常云硬盘如下：' + i['name']
             else:
@@ -240,21 +241,6 @@ def osPlatCheck(document, osInfo):
     osPlatDocument(document,list1,list2)
     del list1, list2
     return
-
-
-
-# os = cloudosCheck('192.168.2.189', 'root', 'cloudos', 'admin', 'cloudos')
-# document = openDocument()
-# osBasicCheck(document,os)
-# osPlatCheck(document,os)
-# document.save('test1.docx')
-# print(os.osInfo)
-
-
-
-#cloudos3.0 192.168.2.131
-#cloudos2.0 192.168.2.189
-
 
 
 
