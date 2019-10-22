@@ -146,11 +146,11 @@ def check():
     check_ids = request.get_json()
     hostinfos = []
     for check_id in check_ids:
-        host = Host.query.get_or_404(check_id)
+        host = Host.query.get_or_404(check_id['host_id'])
         hostinfo = {'id': host.id, 'role': host.role, 'ip': host.ip, 'status': 'OK', 'sshPort': host.ssh_port,
                     'sshUser': host.ssh_user,
                     'sshPassword': host.ssh_passwd, 'httpPort': host.http_port, 'httpUser': host.http_user,
-                    'httpPassword': host.http_passwd}
+                    'httpPassword': host.http_passwd, 'check_item': check_id['cas_define_check_id']}
         hostinfos.append(hostinfo)
     data = {}
     if not hostinfos:

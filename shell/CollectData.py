@@ -31,7 +31,7 @@ def cloudosVersionCheck(ip, sshUser, sshPassword):
     return version
 
 @applog.logRun(logfile)
-def casCollect(ip, sshUser, sshPassword, httpUser, httpPassword):
+def casCollect(ip, sshUser, sshPassword, httpUser, httpPassword, checkitem):
     logfile = Applog()
     func = {
         'V3.0': Cas3Data,
@@ -47,9 +47,10 @@ def casCollect(ip, sshUser, sshPassword, httpUser, httpPassword):
     cas.cvkStorpoolCollect()
     cas.cvkSharepoolCollect()
     cas.cvkNetsworkCollect()
-    cas.vmBasicCollect()
-    cas.vmDiskRateCollect()
-    cas.vmNetworkDiskCollect()
+    if checkitem == 1:
+        cas.vmBasicCollect()
+        cas.vmDiskRateCollect()
+        cas.vmNetworkDiskCollect()
     cas.cvmBackupEnbleCollect()
     cas.cvmHACollect()
     cas.vmBackupPolicyCollect()

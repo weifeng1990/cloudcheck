@@ -35,11 +35,13 @@ def Check(hostInfo):
     result = {"filename" : '', "content" : ''}
     for i in hostInfo:
         if i['role'] == 'cvm':
-            casInfo = casCollect(i['ip'], i['sshUser'], i['sshPassword'], i['httpUser'], i['httpPassword'])
+            print("巡检项：", i['check_item'])
+            casInfo = casCollect(i['ip'], i['sshUser'], i['sshPassword'], i['httpUser'], i['httpPassword'], i['check_item'])
             casDocumentCreate.cvmCheck(document, casInfo)
             casDocumentCreate.clusterCheck(document, casInfo)
             casDocumentCreate.cvkCheck(document, casInfo)
-            casDocumentCreate.vmCheck(document, casInfo)
+            if i['check_item'] == 1:
+                casDocumentCreate.vmCheck(document, casInfo)
             casDocumentCreate.cvmHaCheck(document, casInfo)
 
         elif i['role'] == 'cloudos':

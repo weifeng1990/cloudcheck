@@ -475,78 +475,79 @@ def vmCheck(document, casInfo):
                     else:
                         list2[0] += '、' + k['name']
                 else:
+                    if k['status'] == 'running':
                     # 虚拟机cpu利用率是否超过80%
-                    if k['cpuReate'] > 80:
-                        if not list2[1]:
-                            list2[1] = "cpu利用率超过80%虚拟机如下：" + k['name']
-                        else:
-                            list2[1] += '、' + k['name']
+                        if k['cpuReate'] > 80:
+                            if not list2[1]:
+                                list2[1] = "cpu利用率超过80%虚拟机如下：" + k['name']
+                            else:
+                                list2[1] += '、' + k['name']
 
-                    # 虚拟机内存利用率是否超过80%
-                    if k['memRate'] > 80:
-                        if not list2[2]:
-                            list2[2] = "内存利用率超过80%虚拟机如下：" + k['name']
-                        else:
-                            list2[2] += '、' + k['name']
+                        # 虚拟机内存利用率是否超过80%
+                        if k['memRate'] > 80:
+                            if not list2[2]:
+                                list2[2] = "内存利用率超过80%虚拟机如下：" + k['name']
+                            else:
+                                list2[2] += '、' + k['name']
 
-                    # 虚拟机castool状态异常
-                    if k['castoolsStatus'] != '1':
-                        if not list2[3]:
-                            list2[3] = "castool状态虚拟机如下：" + k['name']
-                        else:
-                            list2[3] += '、' + k['name']
+                        # 虚拟机castool状态异常
+                        if k['castoolsStatus'] != '1':
+                            if not list2[3]:
+                                list2[3] = "castool状态虚拟机如下：" + k['name']
+                            else:
+                                list2[3] += '、' + k['name']
 
-                    # 虚拟机磁盘分区巡检
-                    tmp = ''
-                    for m in k['diskRate']:
-                        if m['usage'] > 80:
-                            if not tmp:
-                                tmp = "\n虚拟机" + k['name'] + '磁盘利用率超过80%的磁盘如下：' + m['name']
-                            else:
-                                tmp += '、' + m['name']
-                    list2[4] += tmp
-                    del tmp
+                        # 虚拟机磁盘分区巡检
+                        tmp = ''
+                        for m in k['diskRate']:
+                            if m['usage'] > 80:
+                                if not tmp:
+                                    tmp = "\n虚拟机" + k['name'] + '磁盘利用率超过80%的磁盘如下：' + m['name']
+                                else:
+                                    tmp += '、' + m['name']
+                        list2[4] += tmp
+                        del tmp
 
-                    # 虚拟机磁盘巡检
-                    dict1[k['name']] = ''
-                    for n in k['vmdisk']:
-                        tmp = n['path'].split('/')
-                        path = '/' + tmp[1] + '/' + tmp[2]
-                        bool1 = False
-                        for m in j['sharePool']:
-                            if path == m['path']:
-                                bool1 = True
-                        if not bool1:
-                            if not dict1[k['name']]:
-                                dict1[k['name']] = "\n虚拟机" + k['name'] + "磁盘" + n['name'] + '使用了非共享存储池'
-                            else:
-                                dict1[k['name']] += "磁盘" + n['name'] + '使用了非共享存储池'
-                        if n['format'] != 'qcow2':
-                            if not dict1[k['name']]:
-                                dict1[k['name']] = "\n虚拟机" + k['name'] + "磁盘" + n['name'] + '格式错误'
-                            else:
-                                dict1[k['name']] += "磁盘" + n['name'] + '格式错误'
-                        if n['cacheType'] != 'directsync':
-                            if not dict1[k['name']]:
-                                dict1[k['name']] = "\n虚拟机" + k['name'] + "磁盘" + n['name'] + '缓存方式错误'
-                            else:
-                                dict1[k['name']] += "磁盘" + n['name'] + '缓存方式错误'
-                    list2[5] += dict1[k['name']]
+                        # 虚拟机磁盘巡检
+                        dict1[k['name']] = ''
+                        for n in k['vmdisk']:
+                            tmp = n['path'].split('/')
+                            path = '/' + tmp[1] + '/' + tmp[2]
+                            bool1 = False
+                            for m in j['sharePool']:
+                                if path == m['path']:
+                                    bool1 = True
+                            if not bool1:
+                                if not dict1[k['name']]:
+                                    dict1[k['name']] = "\n虚拟机" + k['name'] + "磁盘" + n['name'] + '使用了非共享存储池'
+                                else:
+                                    dict1[k['name']] += "磁盘" + n['name'] + '使用了非共享存储池'
+                            if n['format'] != 'qcow2':
+                                if not dict1[k['name']]:
+                                    dict1[k['name']] = "\n虚拟机" + k['name'] + "磁盘" + n['name'] + '格式错误'
+                                else:
+                                    dict1[k['name']] += "磁盘" + n['name'] + '格式错误'
+                            if n['cacheType'] != 'directsync':
+                                if not dict1[k['name']]:
+                                    dict1[k['name']] = "\n虚拟机" + k['name'] + "磁盘" + n['name'] + '缓存方式错误'
+                                else:
+                                    dict1[k['name']] += "磁盘" + n['name'] + '缓存方式错误'
+                        list2[5] += dict1[k['name']]
 
-                    # 虚拟机网卡巡检
-                    dict2[k['name']] = ''
-                    for m in k['vmNetwork']:
-                        if m['mode'] != 'virtio':
-                            if not dict2[k['name']]:
-                                dict2[k['name']] = '\n虚拟机' + k['name'] + '网卡' + m['name'] + '模式错误'
-                            else:
-                                dict2[k['name']] = '网卡' + m['name'] + '模式错误'
-                        if m['KernelAccelerated'] != '1':
-                            if not dict2[k['name']]:
-                                dict2[k['name']] = '\n虚拟机' + k['name'] + '网卡' + m['name'] + '未开启内核加速'
-                            else:
-                                dict2[k['name']] = '网卡' + m['name'] + '未开启内核加速'
-                    list2[6] += dict2[k['name']]
+                        # 虚拟机网卡巡检
+                        dict2[k['name']] = ''
+                        for m in k['vmNetwork']:
+                            if m['mode'] != 'virtio':
+                                if not dict2[k['name']]:
+                                    dict2[k['name']] = '\n虚拟机' + k['name'] + '网卡' + m['name'] + '模式错误'
+                                else:
+                                    dict2[k['name']] = '网卡' + m['name'] + '模式错误'
+                            if m['KernelAccelerated'] != '1':
+                                if not dict2[k['name']]:
+                                    dict2[k['name']] = '\n虚拟机' + k['name'] + '网卡' + m['name'] + '未开启内核加速'
+                                else:
+                                    dict2[k['name']] = '网卡' + m['name'] + '未开启内核加速'
+                        list2[6] += dict2[k['name']]
             del dict1, dict2
 
     for i in list2:

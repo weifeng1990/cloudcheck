@@ -21,14 +21,7 @@ class Cas3Data:
         self.casInfo = {}
         self.sshUser = sshUser
         self.sshPassword = sshPassword
-        self.cookies = requests.get(self.url, auth=HTTPDigestAuth('admin', 'zwy.com123')).cookies
-        return
-
-    def getcookies(self):
-        response = requests.get(self.url, auth=HTTPDigestAuth('admin', 'zwy.com123'))
-        cookies = response.cookies
-        response.close()
-        self.cookies = cookies
+        self.cookies = requests.get(self.url, auth=HTTPDigestAuth(self.httpUser, self.httpPassword)).cookies
         return
 
     # 获取cvm基础信息：版本信息、服务器版本、服务器规格、部署方式
@@ -299,7 +292,6 @@ class Cas3Data:
             response = requests.get(self.url + 'storage/pool?hostId=' + cvk['id'], cookies=self.cookies)
             contxt1 = response.text
             response.close()
-            print("host ID", cvk['id'])
             dict1 = xmltodict.parse(contxt1)['list']['storagePool']
             temp = []
             li = []
