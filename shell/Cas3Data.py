@@ -464,11 +464,12 @@ class Cas3Data:
             del dict1
         for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
-                for k in j['vmInfo']:
-                    if k['status'] == 'running' and k['id'] in diskdict.keys():
-                        k['diskRate'] = diskdict[k['id']]
-                    else:
-                        k['diskRate'] = []
+                if j['status'] == '1':
+                    for k in j['vmInfo']:
+                        if k['status'] == 'running' and k['id'] in diskdict.keys():
+                            k['diskRate'] = diskdict[k['id']]
+                        else:
+                            k['diskRate'] = []
         return
 
     ################
@@ -553,9 +554,10 @@ class Cas3Data:
         li = []
         for i in self.casInfo['clusterInfo']:
             for j in i['cvkInfo']:
-                for k in j['vmInfo']:
-                    if k['status'] == 'running':
-                        li.append(k)
+                if j['status'] == '1':
+                    for k in j['vmInfo']:
+                        if k['status'] == 'running':
+                            li.append(k)
         threadlist = threadpool.makeRequests(self.vmNetworkDisk, li)
         for h in threadlist:
             pool.putRequest(h)
