@@ -311,9 +311,10 @@ def clusterCheck(document, casInfo):
     for i in casInfo['clusterInfo']:
         dict1[i['name']] = list()
         for j in i['cvkInfo']:
-            for k in j['vswitch']:
-                if not k['name'] in dict1[i['name']]:
-                    dict1[i['name']].append(k['name'])
+            if j['status'] == '1':
+                for k in j['vswitch']:
+                    if not k['name'] in dict1[i['name']]:
+                        dict1[i['name']].append(k['name'])
     for i in casInfo['clusterInfo']:
         if len(dict1[i['name']]) != 3:
             list2[2] += "集群" + i['name'] + "下交换机的部署不合规\n"
@@ -412,7 +413,7 @@ def cvkCheck(document, casInfo):
                         if not dict1[j['name']]:
                             dict1[j['name']] += "\n主机" + j["name"] + "磁盘利用率查过80%的磁盘如下：" + k["name"]
                         else:
-                            dict1[j['name']] += "、" + k["name"]
+                            dict1[j['name']] += ("、" + k["name"])
                 for h in dict1.values():
                     list2[3] += h
 
@@ -422,7 +423,7 @@ def cvkCheck(document, casInfo):
                         if not dict2[j['name']]:
                             dict2[j['name']] = "\n主机" + j['name'] + "状态异常磁盘如下：" + m['name']
                         else:
-                            dict2[j['name']] += m['name']
+                            dict2[j['name']] += ("、" + m['name'])
                 for h in dict2.values():
                     list2[4] += h
 
@@ -432,17 +433,17 @@ def cvkCheck(document, casInfo):
                         if not dict3[j['name']]:
                             dict3[j['name']] = "\n主机" + j['name'] + "状态异常虚拟交换机如下：" + k['name']
                         else:
-                            dict3[j['name']] += k['name']
+                            dict3[j['name']] += ("、" + k['name'])
                 for h in dict2.values():
                     list2[5] += h
 
                 #网卡状态
                 for k in j['network']:
-                    if k['status'] != 'yes' or (int)(k['speed']) < 1000 or k['duplex'] != 'Full':
+                    if k['status'] != '1':
                         if not dict4[j['name']]:
                             dict4[j['name']] = "\n主机" + j['name'] + "状态异常网卡如下：" + k['name']
                         else:
-                            dict4[j['name']] += k['name']
+                            dict4[j['name']] += ("、" + k['name'])
                 for h in dict4.values():
                     list2[6] += h
         del dict1, dict2, dict3, dict4

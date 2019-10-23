@@ -323,36 +323,17 @@ class Cas3Data:
 
     def cvkNetwork(self, cvk):
         if cvk['status'] == '1':
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ip = cvk['ip']
-            ssh.connect(self.host, 22, self.sshUser, self.sshPassword)
-            cmd = "for i in $(ssh\t" + ip +"\tifconfig -a | grep eth | awk '{print $1}');do ssh\t"+ ip +"\tethtool $i | grep -e eth -e Duplex -e Speed -e Link;done"
-            stdin, stdout, stderr = ssh.exec_command(cmd)
-            temp2 = {}
             li = []
-            if not stderr.read():
-                temp1 = stdout.read().decode()
-                j = 0
-                for h in temp1.split():
-                    if h == "(255)":
-                        continue
-                    if not (j - 2) % 10:
-                        temp2['name'] = h.split(':')[0]
-                    elif not (j - 4) % 10:
-                        temp2['speed'] = h.split('M')[0]
-                    elif not (j - 6) % 10:
-                        temp2['duplex'] = h
-                    elif not (j - 9) % 10:
-                        temp2['status'] = h
-                    if j > 0 and (j % 10 == 0):
-                        li.append(temp2.copy())
-                    j += 1
-                del temp1
-            else:
-                print("network check ssh error")
-            del temp2
-            ssh.close()
+            response = requests.get(self.url + 'host/id/' + cvk['id'], cookies=self.cookies)
+            dict1 = xmltodict.parse(response.text)['host']
+            response.close()
+            if 'pNIC' in dict1.keys():
+                dict2 = {}
+                for i in dict1['pNIC']:
+                    dict2['name'] = i['name']
+                    dict2['status'] = i['status']
+                    li.append(dict2.copy())
+                del dict2
             cvk['network'] = li
         return
 
@@ -369,7 +350,7 @@ class Cas3Data:
 
     def vmBasic(self, j):
         # response = requests.get(self.url + 'vm/vmList?hostId=' + j['id'],
-        #         #                         auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
+        #                                  auth=HTTPDigestAuth(self.httpUser, self.httpPassword))
         response = requests.get(self.url + 'vm/vmList?hostId=' + j['id'],  cookies=self.cookies)
         contxt = response.text
         response.close()
