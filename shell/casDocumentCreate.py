@@ -325,22 +325,25 @@ def clusterCheck(document, casInfo):
         dict1[i['name']] = set()
         for j in i['cvkInfo']:
             dict2[j['name']] = set()
-            for k in j['sharePool']:
-                dict1[i['name']].add(k['name'])
-                dict2[j['name']].add(k['name'])
+            if j['status'] == '1':
+                for k in j['sharePool'] :
+                    dict1[i['name']].add(k['name'])
+                    dict2[j['name']].add(k['name'])
 
         for m in i['cvkInfo']:
-            if dict1[i['name']] != dict2[m['name']]:
-                list2[3] += "集群" + i['name'] + "下主机" + m['name'] + "共享存储池与集群不一致"
+            if m['status'] == '1':
+                if dict1[i['name']] != dict2[m['name']]:
+                    list2[3] += "集群" + i['name'] + "下主机" + m['name'] + "共享存储池与集群不一致"
     del dict1, dict2
 
     # 共享存储利用率：
     for i in casInfo['clusterInfo']:
         li1 = list()
         for j in i['cvkInfo']:
-            for k in j['sharePool']:
-                if not k in li1:
-                    li1.append(k)
+            if j['status'] == '1':
+                for k in j['sharePool']:
+                    if not k in li1:
+                        li1.append(k)
         for h in li1:
             if h['rate'] > 0.8:
                 list2[4] = "集群" + i['name'] + "下共享存储池" + h['name'] + "利用率超过80%达到" + str(h['rate'])
