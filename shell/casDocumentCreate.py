@@ -469,7 +469,7 @@ def vmCheck(document, casInfo):
         for j in i['cvkInfo']:
             dict1 = {}
             dict2 = {}
-            if j['status']:
+            if j['status'] == '1':
                 for k in j['vmInfo']:
                     # print(k)
                     # 虚拟机状态
