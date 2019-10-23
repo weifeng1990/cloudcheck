@@ -10,7 +10,6 @@ logfile = applog.Applog()
 
 class Cloudos2Data:
     def __init__(self, ip, sshuser, sshpassword, httpuser, httppassword):
-        print("##############")
         self.ip = ip
         self.sshuser = sshuser
         self.sshpassword = sshpassword
