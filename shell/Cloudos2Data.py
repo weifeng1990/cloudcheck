@@ -50,7 +50,7 @@ class Cloudos2Data:
 
     #获取cloudos服务器硬件信息和软件版本
     @applog.logRun(logfile)
-    def cloudosBasicCellect(self):
+    def cloudosBasicCollect(self):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
