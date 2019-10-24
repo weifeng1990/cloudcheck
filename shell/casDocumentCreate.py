@@ -290,7 +290,7 @@ def cvmCheck(document, casInfo):
     return
 
 
-###################
+##################
 # 集群巡检        #
 ##################
 def clusterCheck(document, casInfo):
@@ -434,7 +434,7 @@ def cvkCheck(document, casInfo):
                             dict3[j['name']] = "\n主机" + j['name'] + "状态异常虚拟交换机如下：" + k['name']
                         else:
                             dict3[j['name']] += ("、" + k['name'])
-                for h in dict2.values():
+                for h in dict3.values():
                     list2[5] += h
 
                 #网卡状态
@@ -459,8 +459,7 @@ def cvkCheck(document, casInfo):
 
 
 #######################################
-# 虚拟机巡检                            #
-#                                      #
+# 虚拟机巡检                           #
 ########################################
 
 def vmCheck(document, casInfo):

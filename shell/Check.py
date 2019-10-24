@@ -35,7 +35,6 @@ def Check(hostInfo):
     result = {"filename" : '', "content" : ''}
     for i in hostInfo:
         if i['role'] == 'cvm':
-            print("巡检项：", i['check_item'])
             casInfo = casCollect(i['ip'], i['sshUser'], i['sshPassword'], i['httpUser'], i['httpPassword'], i['check_item'])
             casDocumentCreate.cvmCheck(document, casInfo)
             casDocumentCreate.clusterCheck(document, casInfo)
