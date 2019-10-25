@@ -60,6 +60,7 @@ def cloudosfunc(fun):
     fun()
     return
 
+
 @applog.logRun(logfile)
 def cloudosCollect(ip, sshUser, sshPassword, httpUser, httpPassword):
     version = cloudosVersionCheck(ip, sshUser, sshPassword)
@@ -71,10 +72,11 @@ def cloudosCollect(ip, sshUser, sshPassword, httpUser, httpPassword):
     cloud = func[version](ip, sshUser, sshPassword, httpUser, httpPassword)
     cloud.NodeCollect()
     cloud.findMaster()
+    cloud.cloudosBasicCollect()
     ##########多线程方法############################
     funlist = [cloud.diskRateCollect, cloud.memRateCollect, cloud.cpuRateCollect, cloud.containerStateCollect,
                cloud.dockerImageCheck, cloud.shareStorErrorCollect, cloud.containerServiceCollect, cloud.containerLBCollect,
-               cloud.imageCollect, cloud.vmCollect, cloud.vdiskCollect, cloud.cloudosBasicCollect,
+               cloud.imageCollect, cloud.vmCollect, cloud.vdiskCollect,
                cloud.diskCapacity, cloud.nodeNtpTimeCollect]
     pool = threadpool.ThreadPool(4)
     taskList = threadpool.makeRequests(cloudosfunc, funlist)

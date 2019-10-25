@@ -208,11 +208,15 @@ def osPlatCheck(document, osInfo):
         str2 = ''
         for i in osInfo['serviceStatus'][j]:
             if not i['status']:
+                print("#########", j, i['name'], i['status'])
                 if not str2:
-                    str2 = "\n容器" + j +'如下服务异常：' + i['name']
+                    str2 = "\nPOD " + j +'如下服务异常：' + i['name']
                 else:
                     str2 += "、" + i['name']
-        str1 += str2
+            else:
+                continue
+        if not str2:
+            str1 += (str2 + ";")
     list2[9] = str1
 
     # 云主机
@@ -226,7 +230,6 @@ def osPlatCheck(document, osInfo):
     # 云硬盘
     for i in osInfo['vDiskStatus']:
         if i['status'] != 'available' and i['status'] != 'in-use':
-            print(i['name'], i['status'])
             if not list2[11]:
                 list2[11] = '状态异常云硬盘如下：' + i['name']
             else:

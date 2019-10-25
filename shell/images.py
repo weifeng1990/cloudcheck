@@ -125,3 +125,38 @@ imagesv3Set = {
           "registry",
           "cloudos-kube-dns"
   }
+
+servicedictv2 = {
+    "cloudos-openstack": ['ftp-server', 'h3c-agent', 'httpd', 'mongod', 'neutron-server', 'openstack-nova-consoleauth',
+                  'openstack-ceilometer-api', 'openstack-ceilometer-collector',
+                  'openstack-ceilometer-notification',
+                  'openstack-cinder-api', 'openstack-cinder-scheduler', 'openstack-glance-api',
+                  'openstack-nova-conductor',
+                  'openstack-glance-registry', 'openstack-nova-api', 'openstack-nova-cert',
+                  'openstack-nova-novncproxy',
+                  'openstack-nova-scheduler'],
+    "cloudos-openstack-compute": ['openstack-ceilometer-compute', 'openstack-cinder-volume',
+                                  'openstack-neutron-cas-agent',
+                                  'openstack-nova-compute']
+}
+
+servicedictv3 = {
+    "cloudos-openstack-glance": ["ftp-server.service", "openstack-glance-api.service",
+                                 "openstack-glance-registry.service"],
+    "cloudos-neutron-server": ["neutron-server.service"],
+    "cloudos-neutron-agent": ["h3c-agent.service"],
+    "cloudos-openstack-ceilometer": ["openstack-ceilometer-api.service", "openstack-ceilometer-collector.service",
+                                     "openstack-ceilometer-notification.service"],
+    "cloudos-openstack-cinder": ["openstack-cinder-api.service", "openstack-cinder-scheduler.service"],
+    "cloudos-openstack-compute": ["openstack-ceilometer-compute.service", "openstack-cinder-volume.service",
+                                  "openstack-neutron-cas-agent.service", "openstack-nova-compute.service"],
+    "cloudos-openstack-nova": ["openstack-nova-api.service", "openstack-nova-cert.service",
+                               "openstack-nova-conductor.service",
+                               "openstack-nova-consoleauth.service", "openstack-nova-novncproxy.service",
+                               "openstack-nova-scheduler.service"]
+}
+
+services = {
+    'E1': servicedictv2,
+    'E3': servicedictv3
+}

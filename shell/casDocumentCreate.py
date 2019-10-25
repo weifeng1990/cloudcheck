@@ -574,13 +574,11 @@ def cvmHaCheck(document, casInfo):
     # 虚拟交换机的是否配置冗余链路
 
     # cvm是否开启备份策略
-    if not casInfo['BackupEnable']:
+    if casInfo['BackupEnable'] != '1':
         list2[1] = 'cvm未开启备份策略'
-
     # cvm是否开启HA高可靠
     if not casInfo['HA']:
         list2[2] = '未开启HA高可靠'
-
     # 检查虚拟机是否配置高可靠
     if casInfo['vmBackPolicy'] == 'NONE':
         list2[3] = '未配置虚拟机备份'
@@ -591,7 +589,6 @@ def cvmHaCheck(document, casInfo):
                     list2[3] = '状态异常备份策略如下：' + i['name']
                 else:
                     list2[3] += '、' + i['name']
-
     for i in list2:
         if not i:
             list1.append("正常")

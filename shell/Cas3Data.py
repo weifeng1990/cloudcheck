@@ -568,14 +568,9 @@ class Cas3Data:
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(self.host, 22, self.sshUser, self.sshPassword, look_for_keys=False, allow_agent=False)
         stdin, stdout, stderr = ssh.exec_command(
-            "mysql -uroot -p1q2w3e@4R -Dvservice -e'select STATE from TBL_BACKUP_CVM_STRATEGY;' | awk 'NR>1{print $0}'")
-        a = stdout.read().decode()
-        if not a:
-            self.casInfo['BackupEnable'] = False
-        else:
-            self.casInfo['BackupEnable'] = True
+            "mysql -Ns -uroot -p1q2w3e -Dvservice -e'select STATE from TBL_BACKUP_CVM_STRATEGY where ID=1'")
+        self.casInfo['BackupEnable'] = stdout.read().decode().strip()
         return
-
 
     # 虚拟机备份策略
     @applog.logRun(logfile)

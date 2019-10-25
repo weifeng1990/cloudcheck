@@ -32,13 +32,15 @@ class Cloudos3Data(Cloudos2Data):
         response = requests.get("http://" + self.ip + ":8000/sys/identity/v2/projects",
                                 auth=HTTPBasicAuth(self.httpuser, self.httppassword))
         cookies = response.cookies
+        print(response.text)
         for i in json.loads(response.text)['projects']:
+            print(i)
             if i['type'] == "SYSTEM":
+                print(i['uuid'])
                 url = "http://" + self.ip + ":8000/os/compute/v1/v2/" + i['uuid'] + "/servers/detail"
                 # response1 = requests.get(url, auth=HTTPBasicAuth(self.httpuser, self.httppassword))
                 response1 = requests.get(url, cookies = cookies)
                 serv = json.loads(response1.text)
-                print(serv)
                 response1.close()
                 if 'servers' in serv.keys():
                     for j in serv['servers']:
@@ -98,63 +100,6 @@ class Cloudos3Data(Cloudos2Data):
         self.osInfo['computeConfliction'] = li2.copy()
         del dic
         del li2
-        return
-
-    @applog.logRun(logfile)
-    def getImage2Pod(self):
-        cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 get pod | awk 'NR>1{print $1}'| while read line;do " \
-              "/opt/bin/kubectl -s 127.0.0.1:8888 describe pod $line | grep Image: |awk -v var1=$line '" \
-              "{print var1,$2}' | cut -d : -f 1;done"
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
-        stdin, stdout, stderr = ssh.exec_command(cmd)
-        text = stdout.read().decode().strip()
-        dic1 = {}
-        for i in text.splitlines():
-            dic1[i.split()[1]] = i.split()[0]
-        ssh.close()
-        return dic1
-
-    @applog.logRun(logfile)
-    def containerServiceCollect(self):
-        servicedict = {
-            "cloudos-openstack-glance": ["ftp-server.service","openstack-glance-api.service",
-                                         "openstack-glance-registry.service"],
-            "cloudos-neutron-server": ["neutron-server.service"],
-            "cloudos-neutron-agent": ["h3c-agent.service"],
-            "cloudos-openstack-ceilometer": ["openstack-ceilometer-api.service", "openstack-ceilometer-collector.service",
-                                             "openstack-ceilometer-notification.service"],
-            "cloudos-openstack-cinder": ["openstack-cinder-api.service", "openstack-cinder-scheduler.service"],
-            "cloudos-openstack-compute": ["openstack-ceilometer-compute.service","openstack-cinder-volume.service",
-                                          "openstack-neutron-cas-agent.service","openstack-nova-compute.service"],
-            "cloudos-openstack-nova": ["openstack-nova-api.service", "openstack-nova-cert.service", "openstack-nova-conductor.service",
-                                       "openstack-nova-consoleauth.service","openstack-nova-novncproxy.service","openstack-nova-scheduler.service"]
-        }
-        self.osInfo['serviceStatus'] = {}
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
-        podList = self.getImage2Pod()
-        for i in servicedict.keys():
-            pod = podList[i]
-            self.osInfo['serviceStatus'][pod] = []
-            for j in servicedict[i]:
-                dic1 = {}
-                dic1['name'] = j
-                cmd ="/opt/bin/kubectl -s 127.0.0.1:8888 exec -it " + pod +" systemctl status " + j + " | grep Active | awk '{print $2}'"
-                stdin, stdout, stderr = ssh.exec_command(cmd)
-                sshout = stdout.read().decode().strip()
-                if sshout != '':
-                    status = sshout
-                else:
-                    status = "active"
-                if status == "\x1b[1;32mactive":
-                    dic1['status'] = True
-                else:
-                    dic1['status'] = False
-                self.osInfo['serviceStatus'][pod].append(dic1.copy())
-        ssh.close()
         return
 
     #检查容器镜像是否完整

@@ -315,68 +315,48 @@ class Cloudos2Data:
         ssh.close()
         return
 
-    # 检查openstack-compute和openstack内的关键服务是否正常
-    @applog.logRun(logfile)
-    def containerServiceCollect(self):
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
-        self.osInfo['serviceStatus'] = {}
+    def getImage2Pod(self):
         cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 get pod | awk 'NR>1{print $1}'| while read line;do " \
               "/opt/bin/kubectl -s 127.0.0.1:8888 describe pod $line | grep Image: |awk -v var1=$line '" \
               "{print var1,$2}' | cut -d : -f 1;done"
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
         stdin, stdout, stderr = ssh.exec_command(cmd)
-        line = stdout.read().decode()
-        # cloudos-openstack内的服务列表
-        serviceList1 = {'ftp-server', 'h3c-agent', 'httpd', 'mongod', 'neutron-server', 'openstack-nova-consoleauth',
-                        'openstack-ceilometer-api', 'openstack-ceilometer-collector',
-                        'openstack-ceilometer-notification',
-                        'openstack-cinder-api', 'openstack-cinder-scheduler', 'openstack-glance-api',
-                        'openstack-nova-conductor',
-                        'openstack-glance-registry', 'openstack-nova-api', 'openstack-nova-cert',
-                        'openstack-nova-novncproxy',
-                        'openstack-nova-scheduler'}
-
-        # cloudos-openstack-compute内的服务列表
-        serviceList2 = {'openstack-ceilometer-compute', 'openstack-cinder-volume', 'openstack-neutron-cas-agent',
-                        'openstack-nova-compute'}
-
-        line = line.strip()  # 去空白
-        for j in line.splitlines():
-            # 对容器cloudos-openstack内的服务进行检查
-            if j.split()[1] == 'cloudos-openstack':
-                self.osInfo['serviceStatus']['cloudos-openstack'] = list()
-                for i in serviceList1:
-                    dict1 = {}
-                    dict1['name'] = i
-                    cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 exec " \
-                          "-it\t" + j.split()[0] + "\tsystemctl status\t" + i + "| grep Active | awk '{print $2}'"
-                    stdin, stdout, stderr = ssh.exec_command(cmd)
-                    status = stdout.read().decode()
-                    if status == '\x1b[1;32mactive':
-                        dict1['status'] = True
-                    else:
-                        dict1['status'] = False
-                    self.osInfo['serviceStatus']['cloudos-openstack'].append(dict1.copy())
-                    del dict1
-
-            # 对容器cloudos-openstack-compute内的服务进行检查
-            elif j.split()[1] == 'cloudos-openstack-compute':
-                self.osInfo['serviceStatus']['cloudos-openstack-compute'] = list()
-                for i in serviceList2:
-                    dict1 = {}
-                    dict1['name'] = i
-                    cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 exec -it\t" + j.split()[
-                        0] + "\tsystemctl status\t" + i + "| grep Active | awk '{print $2}'"
-                    stdin, stdout, stderr = ssh.exec_command(cmd)
-                    status = stdout.read().decode()
-                    if status == "\x1b[1;32mactive":
-                        dict1['status'] = True
-                    else:
-                        dict1['status'] = False
-                    self.osInfo['serviceStatus']['cloudos-openstack-compute'].append(dict1.copy())
-                    del dict1
+        text = stdout.read().decode().strip()
+        dic1 = {}
+        for i in text.splitlines():
+            if not i.split()[1] in dic1.keys():
+                dic1[i.split()[1]] = []
+            dic1[i.split()[1]].append(i.split()[0])
         ssh.close()
+        return dic1
+
+    # 检查openstack-compute和openstack内的关键服务是否正常
+    @applog.logRun(logfile)
+    def containerServiceCollect(self):
+        self.osInfo['serviceStatus'] = {}
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(self.ip, 22, self.sshuser, self.sshpassword)
+        pods = self.getImage2Pod()
+        version = self.osInfo['version'][0] + self.osInfo['version'][1]
+        for i in images.services[version].keys():
+            podlist = pods[i]
+            for pod in podlist:
+                self.osInfo['serviceStatus'][pod] = []
+                for j in images.services[version][i]:
+                    dict1 = {}
+                    dict1['name'] = j
+                    # cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 exec -it " + pod + " systemctl status " + j + " | grep Active | awk '{print $2}'"
+                    cmd = "/opt/bin/kubectl -s 127.0.0.1:8888 exec -i " + pod + " systemctl status " + j + " | grep Active | awk '{print $3}'"
+                    stdin, stdout, stderr = ssh.exec_command(cmd)
+                    status = status = re.findall(r'\((.*?)\)', stdout.read().decode().strip())[0]
+                    if status == "running":
+                        dict1['status'] = True
+                    else:
+                        dict1['status'] = False
+                    self.osInfo['serviceStatus'][pod].append(dict1.copy())
         return
 
     # 检查云主机镜像是否正常
@@ -401,8 +381,6 @@ class Cloudos2Data:
     @applog.logRun(logfile)
     def vmCollect(self):
         self.osInfo['vmStatus'] = list()
-        # headers = {'content-type': 'application/json', 'Accept': 'application/json', 'X-Auth-Token': ''}
-        # headers['X-Auth-Token'] = self.token
         response = requests.get("http://" + self.ip + ":9000/v3/projects", auth = HTTPBasicAuth(self.httpuser, self.httppassword))
         for i in json.loads(response.text)['projects']:
             if 'cloud' in i.keys() and i['cloud'] is True:     # if后的逻辑运算从左到右
