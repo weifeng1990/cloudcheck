@@ -393,7 +393,6 @@ def cvkCheck(document, casInfo):
                 else:
                     list2[0] += j['name'] + '\n'
             else:
-                print("#############", j['name'])
                 # 主机cpu利用率
                 if j['cpuRate'] > 80:
                     if not list2[1]:
