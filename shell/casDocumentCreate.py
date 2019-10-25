@@ -376,11 +376,11 @@ def clusterCheck(document, casInfo):
 def cvkCheck(document, casInfo):
     list1 = []
     list2 = ['' for n in range(7)]
+    dict1 = {}
+    dict2 = {}
+    dict3 = {}
+    dict4 = {}
     for i in casInfo['clusterInfo']:
-        dict1 = {}
-        dict2 = {}
-        dict3 = {}
-        dict4 = {}
         for j in i['cvkInfo']:
             dict1[j['name']] = ''
             dict2[j['name']] = ''
@@ -393,6 +393,7 @@ def cvkCheck(document, casInfo):
                 else:
                     list2[0] += j['name'] + '\n'
             else:
+                print("#############", j['name'])
                 # 主机cpu利用率
                 if j['cpuRate'] > 80:
                     if not list2[1]:
@@ -414,8 +415,6 @@ def cvkCheck(document, casInfo):
                             dict1[j['name']] += "\n主机" + j["name"] + "磁盘利用率查过80%的磁盘如下：" + k["name"]
                         else:
                             dict1[j['name']] += ("、" + k["name"])
-                for h in dict1.values():
-                    list2[3] += h
 
                 # 主机存储池状态：
                 for m in j['storagePool']:
@@ -424,8 +423,6 @@ def cvkCheck(document, casInfo):
                             dict2[j['name']] = "\n主机" + j['name'] + "状态异常磁盘如下：" + m['name']
                         else:
                             dict2[j['name']] += ("、" + m['name'])
-                for h in dict2.values():
-                    list2[4] += h
 
                 # 虚拟交换机状态
                 for k in j['vswitch']:
@@ -434,8 +431,6 @@ def cvkCheck(document, casInfo):
                             dict3[j['name']] = "\n主机" + j['name'] + "状态异常虚拟交换机如下：" + k['name']
                         else:
                             dict3[j['name']] += ("、" + k['name'])
-                for h in dict3.values():
-                    list2[5] += h
 
                 #网卡状态
                 for k in j['network']:
@@ -444,9 +439,19 @@ def cvkCheck(document, casInfo):
                             dict4[j['name']] = "\n主机" + j['name'] + "状态异常网卡如下：" + k['name']
                         else:
                             dict4[j['name']] += ("、" + k['name'])
-                for h in dict4.values():
-                    list2[6] += h
-        del dict1, dict2, dict3, dict4
+
+    for h in dict1.values():
+        list2[3] += h
+
+    for h in dict2.values():
+        list2[4] += h
+
+    for h in dict3.values():
+        list2[5] += h
+
+    for h in dict4.values():
+        list2[6] += h
+    del dict1, dict2, dict3, dict4
     # 主机巡检结果写入docx
     for i in list2:
         if not i:

@@ -208,14 +208,13 @@ def osPlatCheck(document, osInfo):
         str2 = ''
         for i in osInfo['serviceStatus'][j]:
             if not i['status']:
-                print("#########", j, i['name'], i['status'])
                 if not str2:
                     str2 = "\nPOD " + j +'如下服务异常：' + i['name']
                 else:
                     str2 += "、" + i['name']
             else:
                 continue
-        if not str2:
+        if str2:
             str1 += (str2 + ";")
     list2[9] = str1
 
